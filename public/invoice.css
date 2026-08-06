@@ -396,27 +396,25 @@ input:hover, textarea:hover, select:hover { border-color: #a9c2b9; }
   body { width: auto; height: auto; min-width: 0; margin: 0; background: transparent; }
   .topbar, .mobile-switch, .editor-panel, .preview-toolbar, .toast { display: none !important; }
   .app-shell { display: block !important; width: auto; margin: 0; padding: 0; }
-  /* the page box: clips the scaled-down shell's layout overflow so it can never fragment */
-  .invoice-stage { display: block !important; width: 100%; height: 100vh; margin: 0; padding: 0; overflow: hidden; }
+  /* the page box, in physical units: no vw/vh, which mobile print engines resolve against the
+     device screen instead of the paper. Clips descendant overflow so it can never fragment. */
+  .invoice-stage { display: block !important; width: 210mm; height: 297mm; margin: 0; padding: 0; overflow: hidden; }
   .invoice-shell {
-    /* one fixed A4 box, 1mm under the sheet so rounding can never spill a blank page 2.
-       If a print service forces its own margins it scales this whole box down as a unit
-       instead of reflowing it across pages. */
+    /* exactly one A4 sheet, stated in mm. No transform: iOS Safari and Android Chrome
+       rasterise a transformed element before handing it to the print engine, which clips or
+       blurs the sheet. Native print engines fit-to-page a box sized in physical units on
+       their own, including when the print service forces its own margins. */
     width: 210mm;
     min-width: 0;
     max-width: none;
-    height: 296mm;
+    height: 297mm;
     min-height: 0;
-    aspect-ratio: auto;
     margin: 0 !important;
     padding: 8mm;
     overflow: hidden;
     background: none;
-    /* if the print service forces its own margins the page box is smaller than A4: shrink the
-       whole sheet as one unit instead of reflowing it onto a second page. Browsers without
-       length-division in calc() drop this and keep the plain 210mm box. */
-    transform-origin: top left;
-    transform: scale(min(1, calc(100vw / 210mm), calc(100vh / 296mm))) !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
     break-after: avoid;
     page-break-after: avoid;
     box-shadow: none;
