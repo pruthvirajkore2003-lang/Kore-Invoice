@@ -398,17 +398,18 @@ input:hover, textarea:hover, select:hover { border-color: #a9c2b9; }
   .app-shell, .invoice-stage { display: block !important; width: auto; margin: 0; padding: 0; }
   .invoice-stage { overflow: visible; }
   .invoice-shell {
-    /* never a fixed mm box: if the print service forces its own margins the page box shrinks,
-       and a fixed box then shrink-to-fits (white border) or spills (blank page 2) */
-    width: 100%;
+    /* one fixed A4 box, 1mm under the sheet so rounding can never spill a blank page 2.
+       If a print service forces its own margins it scales this whole box down as a unit
+       instead of reflowing it across pages. */
+    width: 210mm;
     min-width: 0;
     max-width: none;
-    height: auto;
+    height: 296mm;
     min-height: 0;
     aspect-ratio: auto;
     margin: 0 !important;
-    padding: 7mm;
-    overflow: visible;
+    padding: 8mm;
+    overflow: hidden;
     background: none;
     transform: none !important;
     break-after: avoid;
