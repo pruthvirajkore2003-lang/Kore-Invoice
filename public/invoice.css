@@ -386,19 +386,29 @@ input:hover, textarea:hover, select:hover { border-color: #a9c2b9; }
 
 @media print {
   @page { size: A4 portrait; margin: 0; }
-  html, body { width: 210mm; height: 297mm; margin: 0; background: white; }
+  html, body { width: auto; height: auto; min-width: 0; margin: 0; background: white; }
   .topbar, .mobile-switch, .editor-panel, .preview-toolbar, .toast { display: none !important; }
-  .app-shell, .invoice-stage { display: block !important; width: 210mm; margin: 0; padding: 0; }
+  .app-shell, .invoice-stage { display: block !important; width: auto; margin: 0; padding: 0; }
   .invoice-stage { overflow: visible; }
   .invoice-shell {
-    width: 210mm;
-    min-width: 210mm;
-    min-height: 297mm;
-    height: 297mm;
-    margin: 0;
-    padding: 9.8mm;
+    /* fill the real page box: fixed mm would overflow when the print service forces its own
+       margins, and the shrink-to-fit that follows is the white border + blank page 2 */
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    height: 100vh;
+    min-height: 0;
+    aspect-ratio: auto;
+    margin: 0 !important;
+    padding: 7mm;
+    overflow: hidden;
+    transform: none !important;
+    break-inside: avoid;
+    break-after: avoid;
+    page-break-after: avoid;
     box-shadow: none;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
+  .invoice-shell > *:last-child { margin-bottom: 0; }
 }
