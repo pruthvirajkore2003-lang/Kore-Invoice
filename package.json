@@ -1,0 +1,14 @@
+{
+  "name": "stk-invoice-maker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build-static.mjs",
+    "build:offline": "node scripts/build-offline.mjs",
+    "test": "npm run build && node --check public/invoice.js"
+  }
+}

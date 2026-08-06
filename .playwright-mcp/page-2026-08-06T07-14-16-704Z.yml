@@ -1,0 +1,75 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic "STK Invoice Maker" [ref=e3]:
+      - generic [ref=e4]: STK
+      - strong [ref=e6]: Invoice Maker
+    - button "Create PDF" [ref=e8] [cursor=pointer]
+  - navigation "Invoice view" [ref=e9]:
+    - button "Fill details" [ref=e10]
+    - button "Preview" [ref=e11]
+  - main [ref=e12]:
+    - region [ref=e13]:
+      - generic [ref=e14]:
+        - paragraph [ref=e15]: New tax invoice
+        - heading "Enter invoice details" [level=1] [ref=e16]
+        - paragraph [ref=e17]: Draft saves automatically on this phone. Rate entered in rupees, for example 63.75.
+      - generic [ref=e18]:
+        - group "Invoice" [ref=e19]:
+          - generic [ref=e21]:
+            - generic [ref=e22]:
+              - text: Invoice date
+              - textbox "Invoice date" [ref=e23]
+            - generic [ref=e24]:
+              - text: Invoice number
+              - textbox "Invoice number" [ref=e25]
+            - generic [ref=e26]:
+              - text: PIN code
+              - textbox "PIN code" [ref=e27]
+          - generic [ref=e28]:
+            - generic [ref=e29]:
+              - text: PO number
+              - textbox "PO number" [ref=e30]
+            - generic [ref=e31]:
+              - text: PO date
+              - textbox "PO date" [ref=e32]
+        - group "Bill to party" [ref=e33]:
+          - generic [ref=e35]:
+            - text: Buyer name and address
+            - textbox "Buyer name and address" [ref=e36]
+          - generic [ref=e37]:
+            - generic [ref=e38]:
+              - text: State / code
+              - textbox "State / code" [ref=e39]
+            - generic [ref=e40]:
+              - text: Truck number
+              - textbox "Truck number" [ref=e41]
+            - generic [ref=e42]:
+              - text: PAN
+              - textbox "PAN" [ref=e43]
+            - generic [ref=e44]:
+              - text: GSTIN
+              - textbox "GSTIN" [ref=e45]
+        - group "Item details" [ref=e46]
+        - group "Tax and payment" [ref=e48]:
+          - generic [ref=e50]:
+            - generic [ref=e51]:
+              - text: IGST %
+              - spinbutton "IGST %" [ref=e52]
+            - generic [ref=e53]:
+              - text: SGST %
+              - spinbutton "SGST %" [ref=e54]
+            - generic [ref=e55]:
+              - text: CGST %
+              - spinbutton "CGST %" [ref=e56]
+            - generic [ref=e57]:
+              - text: Freight (INR)
+              - spinbutton "Freight (INR)" [ref=e58]
+            - generic [ref=e59]:
+              - text: Payment status
+              - combobox "Payment status" [ref=e60]:
+                - option "Pending" [selected]
+                - option "Paid"
+                - option "Partially paid"
+      - button "Preview invoice" [ref=e62] [cursor=pointer]
+    - text: ❧ 🌿 🌿
+  - status

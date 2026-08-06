@@ -1,0 +1,265 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic "STK Invoice Maker" [ref=e3]:
+      - generic [ref=e4]: STK
+      - generic [ref=e5]:
+        - strong [ref=e6]: Invoice Maker
+        - generic [ref=e7]: Suresh Tukaram Kore
+    - generic [ref=e8]:
+      - button "New invoice" [ref=e9] [cursor=pointer]
+      - button "Create PDF" [ref=e10] [cursor=pointer]
+  - main [ref=e11]:
+    - region [ref=e12]:
+      - generic [ref=e13]:
+        - paragraph [ref=e14]: New tax invoice
+        - heading "Enter invoice details" [level=1] [ref=e15]
+        - paragraph [ref=e16]: Draft saves automatically on this phone. Rate entered in rupees, for example 63.75.
+      - generic [ref=e17]:
+        - group "Invoice" [ref=e18]:
+          - generic [ref=e20]:
+            - generic [ref=e21]:
+              - text: Invoice date
+              - textbox "Invoice date" [ref=e22]
+            - generic [ref=e23]:
+              - text: Invoice number
+              - textbox "Invoice number" [ref=e24]
+            - generic [ref=e25]:
+              - text: PIN code
+              - textbox "PIN code" [ref=e26]
+          - generic [ref=e27]:
+            - generic [ref=e28]:
+              - text: PO number
+              - textbox "PO number" [ref=e29]
+            - generic [ref=e30]:
+              - text: PO date
+              - textbox "PO date" [ref=e31]
+        - group "Bill to party" [ref=e32]:
+          - generic [ref=e34]:
+            - text: Buyer name and address
+            - textbox "Buyer name and address" [ref=e35]
+          - generic [ref=e36]:
+            - generic [ref=e37]:
+              - text: State / code
+              - textbox "State / code" [ref=e38]
+            - generic [ref=e39]:
+              - text: Truck number
+              - textbox "Truck number" [ref=e40]
+            - generic [ref=e41]:
+              - text: PAN
+              - textbox "PAN" [ref=e42]
+            - generic [ref=e43]:
+              - text: GSTIN
+              - textbox "GSTIN" [ref=e44]
+        - group "Item details" [ref=e45]:
+          - generic [ref=e47]:
+            - group [ref=e48]:
+              - generic "Item 1 −" [ref=e49] [cursor=pointer]:
+                - generic [ref=e50]: Item 1
+                - strong
+                - text: −
+              - generic [ref=e51]:
+                - generic [ref=e52]:
+                  - text: Particulars
+                  - textbox "Particulars" [ref=e53]
+                - generic [ref=e54]:
+                  - text: HSN code
+                  - textbox "HSN code" [ref=e55]
+                - generic [ref=e56]:
+                  - text: Bags
+                  - spinbutton "Bags" [ref=e57]
+                - generic [ref=e58]:
+                  - text: UOM
+                  - textbox "UOM" [ref=e59]
+                - generic [ref=e60]:
+                  - text: Quantity
+                  - spinbutton "Quantity" [ref=e61]
+                - generic [ref=e62]:
+                  - text: Rate (INR)
+                  - spinbutton "Rate (INR)" [ref=e63]
+            - group [ref=e64]:
+              - generic "Item 2 +" [ref=e65] [cursor=pointer]:
+                - generic [ref=e66]: Item 2
+                - strong
+                - text: +
+            - group [ref=e67]:
+              - generic "Item 3 +" [ref=e68] [cursor=pointer]:
+                - generic [ref=e69]: Item 3
+                - strong
+                - text: +
+            - group [ref=e70]:
+              - generic "Item 4 +" [ref=e71] [cursor=pointer]:
+                - generic [ref=e72]: Item 4
+                - strong
+                - text: +
+            - group [ref=e73]:
+              - generic "Item 5 +" [ref=e74] [cursor=pointer]:
+                - generic [ref=e75]: Item 5
+                - strong
+                - text: +
+            - group [ref=e76]:
+              - generic "Item 6 +" [ref=e77] [cursor=pointer]:
+                - generic [ref=e78]: Item 6
+                - strong
+                - text: +
+        - group "Tax and payment" [ref=e79]:
+          - generic [ref=e81]:
+            - generic [ref=e82]:
+              - text: IGST %
+              - spinbutton "IGST %" [ref=e83]
+            - generic [ref=e84]:
+              - text: SGST %
+              - spinbutton "SGST %" [ref=e85]
+            - generic [ref=e86]:
+              - text: CGST %
+              - spinbutton "CGST %" [ref=e87]
+            - generic [ref=e88]:
+              - text: Freight (INR)
+              - spinbutton "Freight (INR)" [ref=e89]
+            - generic [ref=e90]:
+              - text: Payment status
+              - combobox "Payment status" [ref=e91]:
+                - option "Pending" [selected]
+                - option "Paid"
+                - option "Partially paid"
+    - region "Printable invoice preview" [ref=e92]:
+      - generic [ref=e93]:
+        - generic [ref=e94]: Live preview
+        - button "Create PDF" [ref=e96] [cursor=pointer]
+      - article [ref=e97]:
+        - generic [ref=e98]:
+          - generic [ref=e115]:
+            - heading "SURESH TUKARAM KORE" [level=2] [ref=e116]
+            - paragraph [ref=e117]: Mhaswad Road Malshiras, Dist. Solapur, Malshiras
+            - paragraph [ref=e118]: Maharashtra - 413107
+            - strong [ref=e119]: "Mobile: 7057100034 | PAN: ACOPK3657P"
+          - generic [ref=e120]:
+            - strong [ref=e121]: TAX INVOICE
+            - generic [ref=e122]: ORIGINAL FOR RECIPIENT
+        - generic [ref=e123]:
+          - generic [ref=e124]: INVOICE DATE
+          - generic [ref=e127]: INVOICE NO.
+          - generic [ref=e130]: PIN CODE
+        - generic [ref=e133]:
+          - generic [ref=e134]: PO NO.
+          - generic [ref=e137]: PO DATE
+        - generic [ref=e140]:
+          - generic [ref=e141]: BILL TO PARTY
+          - generic [ref=e144]:
+            - generic [ref=e145]: STATE / CODE
+            - generic [ref=e148]: PAN
+            - generic [ref=e151]: GSTIN
+            - generic [ref=e154]: TRUCK NO.
+        - heading "❧ ITEM DETAILS" [level=3] [ref=e157]
+        - table [ref=e158]:
+          - rowgroup [ref=e168]:
+            - row [ref=e169]:
+              - columnheader "S. No." [ref=e170]
+              - columnheader "PARTICULARS" [ref=e171]
+              - columnheader "HSN Code" [ref=e172]
+              - columnheader "Bags" [ref=e173]
+              - columnheader "UOM" [ref=e174]
+              - columnheader "Quantity" [ref=e175]
+              - columnheader "Rate" [ref=e176]
+              - columnheader "Value of Supply" [ref=e177]: Value ofSupply
+          - rowgroup [ref=e178]:
+            - row [ref=e179]:
+              - cell [ref=e180]
+              - cell [ref=e181]
+              - cell [ref=e182]
+              - cell [ref=e183]
+              - cell [ref=e184]
+              - cell [ref=e185]
+              - cell [ref=e186]
+              - cell [ref=e187]
+            - row [ref=e188]:
+              - cell [ref=e189]
+              - cell [ref=e190]
+              - cell [ref=e191]
+              - cell [ref=e192]
+              - cell [ref=e193]
+              - cell [ref=e194]
+              - cell [ref=e195]
+              - cell [ref=e196]
+            - row [ref=e197]:
+              - cell [ref=e198]
+              - cell [ref=e199]
+              - cell [ref=e200]
+              - cell [ref=e201]
+              - cell [ref=e202]
+              - cell [ref=e203]
+              - cell [ref=e204]
+              - cell [ref=e205]
+            - row [ref=e206]:
+              - cell [ref=e207]
+              - cell [ref=e208]
+              - cell [ref=e209]
+              - cell [ref=e210]
+              - cell [ref=e211]
+              - cell [ref=e212]
+              - cell [ref=e213]
+              - cell [ref=e214]
+            - row [ref=e215]:
+              - cell [ref=e216]
+              - cell [ref=e217]
+              - cell [ref=e218]
+              - cell [ref=e219]
+              - cell [ref=e220]
+              - cell [ref=e221]
+              - cell [ref=e222]
+              - cell [ref=e223]
+            - row [ref=e224]:
+              - cell [ref=e225]
+              - cell [ref=e226]
+              - cell [ref=e227]
+              - cell [ref=e228]
+              - cell [ref=e229]
+              - cell [ref=e230]
+              - cell [ref=e231]
+              - cell [ref=e232]
+        - generic [ref=e233]:
+          - generic [ref=e234]:
+            - generic [ref=e235]:
+              - generic [ref=e236]: PAYMENT STATUS
+              - generic [ref=e237]: PENDING
+            - generic [ref=e238]:
+              - generic [ref=e239]: AMOUNT IN WORDS
+              - strong [ref=e240]: Zero Rupees Only
+          - generic [ref=e241]:
+            - generic [ref=e242]:
+              - generic [ref=e243]: IGST
+              - generic [ref=e245]: "%"
+              - strong [ref=e246]
+            - generic [ref=e247]:
+              - generic [ref=e248]: SGST
+              - generic [ref=e250]: "%"
+              - strong [ref=e251]
+            - generic [ref=e252]:
+              - generic [ref=e253]: CGST
+              - generic [ref=e255]: "%"
+              - strong [ref=e256]
+            - generic [ref=e257]:
+              - generic [ref=e258]: FREIGHT
+              - strong [ref=e259]
+            - generic [ref=e260]:
+              - generic [ref=e261]: GRAND TOTAL
+              - strong [ref=e262]: "0.00"
+        - generic [ref=e263]:
+          - generic [ref=e264]:
+            - heading "🌿 BANK DETAILS" [level=3] [ref=e265]
+            - generic [ref=e266]:
+              - term [ref=e267]: Bank Name
+              - definition [ref=e268]: ICICI BANK
+              - term [ref=e269]: Branch Name
+              - definition [ref=e270]: Akluj
+              - term [ref=e271]: Bank A/c
+              - definition [ref=e272]: "649605075003"
+              - term [ref=e273]: IFSC Code
+              - definition [ref=e274]: ICIC0006496
+          - generic [ref=e275]:
+            - heading "🌿 FOR SURESH TUKARAM KORE" [level=3] [ref=e276]
+            - img "Authorised signature" [ref=e277]
+            - paragraph [ref=e278]: Authorised Signatory
+        - generic [ref=e279]:
+          - generic [ref=e280]: Computer generated invoice
+          - generic [ref=e281]: Page 1 of 1
+  - status
