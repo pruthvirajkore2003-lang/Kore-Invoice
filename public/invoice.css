@@ -397,19 +397,23 @@ input:hover, textarea:hover, select:hover { border-color: #a9c2b9; }
   body { width: auto; height: auto; min-width: 0; margin: 0; background: transparent; }
   .topbar, .mobile-switch, .editor-panel, .preview-toolbar, .toast { display: none !important; }
   .app-shell { display: block !important; width: auto; margin: 0; padding: 0; }
-  /* the page box, in physical units: no vw/vh, which mobile print engines resolve against the
-     device screen instead of the paper. Clips descendant overflow so it can never fragment. */
-  .invoice-stage { display: block !important; width: 210mm; height: 297mm; margin: 0; padding: 0; overflow: hidden; }
+  /* Flexible page box: fills the print canvas but never exceeds one A4 sheet. Desktop
+     engines honor @page and get the full 210mm x 297mm; mobile engines force their own
+     margins and the box shrinks into them instead of overflowing. Clips descendant
+     overflow so it can never fragment. */
+  .invoice-stage { display: block !important; width: 100%; max-width: 210mm; height: 100%; max-height: 297mm; box-sizing: border-box; margin: 0; padding: 0; overflow: hidden; }
   .invoice-shell {
-    /* exactly one A4 sheet, stated in mm. No transform: iOS Safari and Android Chrome
+    /* percentage size capped at one A4 sheet. No transform: iOS Safari and Android Chrome
        rasterise a transformed element before handing it to the print engine, which clips or
-       blurs the sheet. Native print engines fit-to-page a box sized in physical units on
-       their own, including when the print service forces its own margins. */
-    width: 210mm;
+       blurs the sheet. Native print engines fit-to-page a flexible box on their own,
+       including when the print service forces its own margins. */
+    width: 100%;
     min-width: 0;
-    max-width: none;
-    height: 297mm;
+    max-width: 210mm;
+    height: 100%;
     min-height: 0;
+    max-height: 297mm;
+    box-sizing: border-box;
     margin: 0 !important;
     padding: 8mm;
     overflow: hidden;
