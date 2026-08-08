@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="mr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#7b281e" />
+    <title>STK डिजिटल माल पावती</title>
+    <link rel="stylesheet" href="/memo.css" />
+  </head>
+  <body class="view-editor memo-app">
+    <header class="topbar">
+      <div class="brand-mini" aria-label="STK Memo Maker">
+        <span class="brand-dot memo-dot">STK</span>
+        <span><strong>डिजिटल माल पावती</strong><small>सुरेश तुकाराम कोरे</small></span>
+      </div>
+      <div class="top-actions">
+        <a class="button doc-switch" href="/invoice.html">Tax Invoice</a>
+        <button class="button ghost" id="newMemo" type="button">नवीन</button>
+      </div>
+    </header>
+
+    <nav class="mobile-switch" aria-label="पावती दृश्य">
+      <button class="switch-button active" data-view="editor" type="button">माहिती भरा</button>
+      <button class="switch-button" data-view="preview" type="button">पावती पहा</button>
+    </nav>
+
+    <main class="app-shell">
+      <section class="editor-panel" aria-labelledby="memo-editor-title">
+        <div class="editor-intro">
+          <p class="eyebrow memo-eyebrow">माल वाहतूक पावती</p>
+          <h1 id="memo-editor-title">पावतीची माहिती भरा</h1>
+          <p>माहिती या फोनवर आपोआप जतन होते. भाडे आणि बाकी रक्कम आपोआप मोजली जाते.</p>
+        </div>
+
+        <form id="memoForm" autocomplete="off">
+          <fieldset class="form-card">
+            <legend>पावती</legend>
+            <div class="form-grid three">
+              <label>तारीख<input type="date" name="memoDate" data-field /></label>
+              <label>पावती नं.<input type="text" name="memoNumber" inputmode="numeric" data-field /></label>
+              <label>बुक नं.<input type="text" name="bookNumber" inputmode="numeric" data-field /></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="form-card">
+            <legend>प्राप्तकर्ता</legend>
+            <label>श्री / फर्मचे नाव<input type="text" name="partyName" data-field /></label>
+            <div class="form-grid two">
+              <label>मुक्काम<input type="text" name="destination" data-field /></label>
+              <label>गाव<input type="text" name="village" data-field /></label>
+            </div>
+            <label class="block-gap">संपूर्ण पत्ता<textarea name="fullAddress" rows="2" data-field></textarea></label>
+          </fieldset>
+
+          <fieldset class="form-card">
+            <legend>वाहतूक माहिती</legend>
+            <div class="form-grid two">
+              <label>मोटार नं.<input type="text" name="vehicleNumber" data-field /></label>
+              <label>मोटार मालक<input type="text" name="ownerName" data-field /></label>
+              <label>ड्रायव्हर<input type="text" name="driverName" data-field /></label>
+              <label>लायसन्स नं.<input type="text" name="licenceNumber" data-field /></label>
+              <label>PO नं.<input type="text" name="poNumber" data-field /></label>
+              <label>सही मोटर एजंट / नाव<input type="text" name="agentSignature" data-field /></label>
+              <label>मोटार एजंट मोबाईल<input type="tel" name="agentPhone" inputmode="tel" data-field /></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="form-card">
+            <legend>माल आणि भाडे</legend>
+            <div class="memo-items-toolbar">
+              <p>प्रत्येक मालाचा तपशील स्वतंत्रपणे भरा.</p>
+              <button class="button memo-add-item" id="addMemoItem" type="button">+ माल जोडा</button>
+            </div>
+            <div class="memo-item-editors" id="memoItemEditors"></div>
+            <div class="memo-freight-summary">
+              <div><span>एकूण भाडे</span><output id="formTotalFreight">0.00</output></div>
+              <div><span>एकूण उचल</span><output id="formAdvance">0.00</output></div>
+              <div class="balance-summary-card"><span>बाकी भाडे</span><small>देय रुपये</small><output id="formBalance">0.00</output></div>
+            </div>
+          </fieldset>
+
+          <fieldset class="form-card">
+            <legend>अतिरिक्त नोंद</legend>
+            <label>विशेष सूचना<textarea name="specialNote" rows="2" data-field></textarea></label>
+          </fieldset>
+        </form>
+
+        <div class="mobile-create">
+          <button class="button primary memo-primary wide" id="mobilePreview" type="button">पावती पहा</button>
+        </div>
+      </section>
+
+      <section class="invoice-stage memo-stage" aria-label="छापण्यासाठी माल पावती">
+        <div class="preview-toolbar">
+          <span><i></i> थेट पावती दृश्य</span>
+          <button class="button primary memo-primary" id="previewPrint" type="button">PDF तयार करा</button>
+        </div>
+
+        <article class="memo-shell" id="memo">
+          <div class="memo-frame">
+            <div class="memo-topline">
+              <span>माळशिरस</span>
+              <strong class="shree-mark">॥ श्री ॥</strong>
+              <span aria-hidden="true"></span>
+            </div>
+
+            <div class="memo-number-row">
+              <span>बुक नं. <b data-out="bookNumber"></b></span>
+              <span>तारीख: <b data-out="memoDate"></b></span>
+            </div>
+
+            <div class="party-lines">
+              <div><label>श्री. रा. रा.</label><span data-out="partyName"></span><label>मुक्काम</label><span data-out="destination"></span></div>
+              <div><label>संपूर्ण पत्ता</label><span data-out="fullAddress"></span></div>
+            </div>
+
+            <div class="memo-brand-row">
+              <div>
+                <h2>माळशिरसमधून :- सुरेश तुकाराम कोरे</h2>
+                <p>भुसार मालाचे व्यापारी &nbsp;&nbsp; म्हसवड रोड, माळशिरस, जि. सोलापूर - ४१३१०७</p>
+                <p class="memo-mobile">Mobile: <strong>7057100034</strong></p>
+              </div>
+              <strong class="memo-number" data-out="memoNumber"></strong>
+            </div>
+
+            <div class="transport-lines">
+              <p>यांचा सप्रेम नमस्कार वि. वि. आज रोजी इकडून मोटार नं. <span data-out="vehicleNumber"></span> मध्ये</p>
+              <p>मोटार मालक <span data-out="ownerName"></span> गाव <span data-out="village"></span></p>
+              <p>ड्रायव्हर <span data-out="driverName"></span> ला. नं. <span data-out="licenceNumber"></span></p>
+              <p>यांचे मोटारीमधून माल पाठविला. त्याचा तपशील खालील प्रमाणे &nbsp; PO नं. <span data-out="poNumber"></span></p>
+            </div>
+
+            <table class="memo-table">
+              <colgroup>
+                <col class="goods-col" />
+                <col class="bags-col" />
+                <col class="rate-col" />
+                <col class="total-col" />
+                <col class="advance-col" />
+                <col class="balance-col" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th><span>मालाचा तपशील</span></th>
+                  <th><span>पोती</span><small>नग</small></th>
+                  <th><span>भाडे दर</span><small>दर पद्धत</small></th>
+                  <th><span>एकूण भाडे</span><small>रुपये</small></th>
+                  <th><span>उचल दिली</span><small>रुपये</small></th>
+                  <th class="balance-heading"><span>बाकी भाडे</span><small>देय रुपये</small></th>
+                </tr>
+              </thead>
+              <tbody id="memoItemsBody"></tbody>
+              <tfoot>
+                <tr class="memo-summary-row">
+                  <th colspan="3" scope="row"><span>एकूण सारांश</span><small>सर्व माल</small></th>
+                  <td class="memo-summary-value"><span>एकूण भाडे</span><strong id="memoGrandTotal"></strong><small>रुपये</small></td>
+                  <td class="memo-summary-value"><span>उचल दिली</span><strong id="memoAdvanceTotal"></strong><small>रुपये</small></td>
+                  <td class="memo-summary-value balance-summary-value"><span>बाकी भाडे</span><strong id="memoBalanceTotal"></strong><small>देय रुपये</small></td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <div class="memo-declaration">
+              <p>वरीलप्रमाणे माल पाठविला आहे. माल रवाना झाल्यानंतर मालाची तूटफूट, कमी-जास्त किंवा कोणत्याही प्रकारच्या बाबतीत जबाबदारी सर्वस्वी वाहतूकदाराची राहील. मालाची पोहोच ताबडतोब द्यावी.</p>
+              <p><strong>टिप:</strong> वरीलप्रमाणे माल तपासून पोहोच करण्याकरिता घेतला आहे. वजन कमी आल्यास भाडे देऊ नये.</p>
+            </div>
+
+            <div class="memo-signatures">
+              <div class="agent-sign">
+                <span>सही मोटर एजंट</span>
+                <strong data-out="agentSignature"></strong>
+                <span>मोबाईल</span>
+                <strong data-out="agentPhone"></strong>
+                <span>ड्रायव्हर</span>
+                <strong data-out="driverName"></strong>
+              </div>
+              <div class="owner-sign">
+                <img src="/signature.png" alt="सुरेश तुकाराम कोरे यांची सही" />
+                <span>सुरेश तुकाराम कोरे</span>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="/memo.js"></script>
+  </body>
+</html>

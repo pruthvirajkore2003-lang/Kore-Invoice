@@ -399,7 +399,6 @@
   document.getElementById("invoiceForm").addEventListener("change", handleFieldInput);
   document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
   document.getElementById("mobilePreview").addEventListener("click", () => setView("preview"));
-  document.getElementById("printInvoice").addEventListener("click", printInvoice);
   document.getElementById("previewPrint").addEventListener("click", printInvoice);
   document.getElementById("newInvoice").addEventListener("click", resetInvoice);
   window.addEventListener("resize", fitPreview, { passive: true });

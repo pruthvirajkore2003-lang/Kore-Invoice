@@ -18,6 +18,18 @@ const textFiles = {
     type: "text/javascript; charset=utf-8",
     body: await readFile(resolve(root, "public/invoice.js"), "utf8"),
   },
+  "/memo.html": {
+    type: "text/html; charset=utf-8",
+    body: await readFile(resolve(root, "public/memo.html"), "utf8"),
+  },
+  "/memo.css": {
+    type: "text/css; charset=utf-8",
+    body: await readFile(resolve(root, "public/memo.css"), "utf8"),
+  },
+  "/memo.js": {
+    type: "text/javascript; charset=utf-8",
+    body: await readFile(resolve(root, "public/memo.js"), "utf8"),
+  },
 };
 
 const binaryFiles = {
