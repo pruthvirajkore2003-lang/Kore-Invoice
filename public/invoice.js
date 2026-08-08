@@ -403,9 +403,14 @@
   document.getElementById("newInvoice").addEventListener("click", resetInvoice);
   window.addEventListener("resize", fitPreview, { passive: true });
   window.addEventListener("beforeprint", () => {
+    const isMobilePrint = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    document.documentElement.style.setProperty("--print-zoom", isMobilePrint ? "0.92" : "1");
     const invoice = document.getElementById("invoice");
     invoice.style.transform = "none";
     invoice.style.marginBottom = "0";
   });
-  window.addEventListener("afterprint", fitPreview);
+  window.addEventListener("afterprint", () => {
+    document.documentElement.style.setProperty("--print-zoom", "1");
+    fitPreview();
+  });
 })();

@@ -387,7 +387,6 @@ input:hover, textarea:hover, select:hover { border-color: #a9c2b9; }
 
 @media print {
   @page { size: A4 portrait; margin: 0; }
-  /* paper on the page canvas, so it covers the sheet edge to edge whatever the page box is */
   html {
     width: auto; height: auto; min-width: 0; margin: 0;
     background: var(--cream) url("/invoice-paper.png") center / cover no-repeat;
@@ -397,26 +396,17 @@ input:hover, textarea:hover, select:hover { border-color: #a9c2b9; }
   body { width: auto; height: auto; min-width: 0; margin: 0; background: transparent; }
   .topbar, .mobile-switch, .editor-panel, .preview-toolbar, .toast { display: none !important; }
   .app-shell { display: block !important; width: auto; margin: 0; padding: 0; }
-  /* Flexible page box: fills the print canvas but never exceeds one A4 sheet. Desktop
-     engines honor @page and get the full 210mm x 297mm; mobile engines force their own
-     margins and the box shrinks into them instead of overflowing. Clips descendant
-     overflow so it can never fragment. */
-  .invoice-stage { display: block !important; width: 100%; max-width: 210mm; height: 100%; max-height: 297mm; box-sizing: border-box; margin: 0; padding: 0; overflow: hidden; }
+  .invoice-stage { display: block !important; margin: 0; padding: 0; overflow: visible; }
   .invoice-shell {
-    /* percentage size capped at one A4 sheet. No transform: iOS Safari and Android Chrome
-       rasterise a transformed element before handing it to the print engine, which clips or
-       blurs the sheet. Native print engines fit-to-page a flexible box on their own,
-       including when the print service forces its own margins. */
-    width: 100%;
+    width: 210mm;
     min-width: 0;
-    max-width: 210mm;
-    height: 100%;
+    height: 297mm;
     min-height: 0;
-    max-height: 297mm;
     box-sizing: border-box;
     margin: 0 !important;
     padding: 8mm;
     overflow: hidden;
+    zoom: var(--print-zoom, 1);
     background: none;
     break-inside: avoid;
     page-break-inside: avoid;
