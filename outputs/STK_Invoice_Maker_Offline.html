@@ -412,12 +412,11 @@ input:hover, textarea:hover, select:hover { border-color: #a9c2b9; }
        rasterise a transformed element before handing it to the print engine, which clips or
        blurs the sheet. Native print engines fit-to-page a box sized in physical units on
        their own, including when the print service forces its own margins. */
-    transform: none !important;
     width: 210mm;
     min-width: 0;
     max-width: none;
-    height: auto !important;
-    min-height: 297mm;
+    height: 297mm;
+    min-height: 0;
     margin: 0 !important;
     padding: 8mm;
     overflow: hidden;

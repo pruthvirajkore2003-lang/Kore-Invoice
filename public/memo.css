@@ -619,5 +619,20 @@ input:hover, textarea:hover, select:hover { border-color: #a9c2b9; }
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
-  .memo-frame { min-height: 281mm; }
+  .memo-frame { min-height: 0; height: 281mm; box-sizing: border-box; }
+
+  /* Mobile print rasterizers mis-composite large alpha/gradient layers
+     (banding artifacts), so print uses precomputed solid tints of --memo-paper. */
+  .memo-shell { overflow: hidden; background: var(--memo-paper); }
+  .memo-frame { background: #fff299; }
+  .memo-brand-row { background: #ffef8b; }
+  .memo-brand-row .memo-mobile, .memo-brand-row .memo-number { background: #fff6b2; }
+  .memo-table th { background: #ffef8b; }
+  .memo-table .balance-heading small { background: #fff5b0; }
+  .memo-table tbody td:nth-child(even) { background: #fff4ad; }
+  .memo-table .settlement-cell { background: #fff2a0; }
+  .memo-table .row-balance-value { background: #fff091; }
+  .memo-table tfoot th, .memo-table tfoot td { background: #ffed7e; }
+  .memo-table tfoot .balance-summary-value { background: #ffe666; }
+  .owner-sign img { mix-blend-mode: normal; }
 }
