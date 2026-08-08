@@ -601,6 +601,8 @@ input:hover, textarea:hover, select:hover { border-color: #a9c2b9; }
     zoom: var(--print-zoom, 1);
     break-inside: avoid;
     page-break-inside: avoid;
+    break-after: avoid;
+    page-break-after: avoid;
     box-shadow: none;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;

@@ -316,15 +316,27 @@
   document.getElementById("previewPrint").addEventListener("click", printMemo);
   document.getElementById("newMemo").addEventListener("click", resetMemo);
   window.addEventListener("resize", fitPreview, { passive: true });
-  window.addEventListener("beforeprint", () => {
-    const isMobilePrint = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    document.documentElement.style.setProperty("--print-zoom", isMobilePrint ? "0.92" : "1");
+
+  const isMobilePrintDevice = () => (
+    navigator.userAgentData?.mobile === true
+    || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+  const preparePrint = () => {
+    document.documentElement.style.setProperty("--print-zoom", isMobilePrintDevice() ? "0.92" : "1");
     const memo = document.getElementById("memo");
     memo.style.transform = "none";
     memo.style.marginBottom = "0";
-  });
-  window.addEventListener("afterprint", () => {
+  };
+  const restorePreview = () => {
     document.documentElement.style.setProperty("--print-zoom", "1");
     fitPreview();
-  });
+  };
+  const printMedia = window.matchMedia("print");
+  const handlePrintMediaChange = (event) => (event.matches ? preparePrint() : restorePreview());
+
+  window.addEventListener("beforeprint", preparePrint);
+  window.addEventListener("afterprint", restorePreview);
+  if (printMedia.addEventListener) printMedia.addEventListener("change", handlePrintMediaChange);
+  else printMedia.addListener(handlePrintMediaChange);
 })();
