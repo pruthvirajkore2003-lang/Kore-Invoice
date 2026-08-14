@@ -486,7 +486,7 @@ input:hover, textarea:hover, select:hover { border-color: #a9c2b9; }
   min-height: 42px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   padding: 4px 12px;
   border-bottom: 1.5px solid var(--memo-line);
   font-weight: 800;

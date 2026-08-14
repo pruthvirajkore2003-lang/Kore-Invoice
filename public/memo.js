@@ -15,7 +15,6 @@
   const blankState = () => ({
     memoDate: "",
     memoNumber: "",
-    bookNumber: "",
     partyName: "",
     destination: "",
     village: "",
@@ -111,6 +110,8 @@
 
   const basisLabels = { bag: "प्रति पोते", quintal: "प्रति क्विंटल", manual: "स्वतः भरलेले" };
 
+  const itemHasData = (item) => Boolean(item.goodsDetails || item.weightKg || item.bags || item.freightRate || item.manualTotal || item.advancePaid || item.rateBasis !== "bag");
+
   const addTextElement = (parent, tag, className, value) => {
     const element = document.createElement(tag);
     if (className) element.className = className;
@@ -123,13 +124,14 @@
     const tbody = document.getElementById("memoItemsBody");
     const table = tbody.closest("table");
     const items = state.items.length ? state.items : [blankItem()];
+    const hasAnyData = items.some(itemHasData);
     tbody.replaceChildren();
     table.style.setProperty("--memo-item-count", String(items.length));
     table.classList.toggle("multiple-items", items.length > 1);
 
     items.forEach((item, index) => {
-      const hasItemData = Boolean(item.goodsDetails || item.weightKg || item.bags || item.freightRate || item.manualTotal || item.advancePaid || item.rateBasis !== "bag");
-      const rowTotals = totals.rows[index];
+      const hasItemData = itemHasData(item);
+      const rowTotals = totals.rows[index] || { total: 0, advance: 0, balance: 0 };
       const row = document.createElement("tr");
       const goodsCell = document.createElement("td");
       goodsCell.className = "goods-value";
@@ -141,14 +143,14 @@
       addTextElement(row, "td", "", item.bags);
       const rateCell = addTextElement(row, "td", "rate-value", item.rateBasis === "manual" && hasItemData ? "-" : (item.freightRate ? formatMoney(numeric(item.freightRate)) : ""));
       addTextElement(rateCell, "small", "", hasItemData ? basisLabels[item.rateBasis] : "");
-      addTextElement(row, "td", "", rowTotals.total ? formatMoney(rowTotals.total) : "");
+      addTextElement(row, "td", "", hasItemData ? formatMoney(rowTotals.total) : "");
       addTextElement(row, "td", "settlement-cell", rowTotals.advance ? formatMoney(rowTotals.advance) : "");
-      addTextElement(row, "td", "settlement-cell row-balance-value", rowTotals.total || rowTotals.advance ? formatMoney(rowTotals.balance) : "");
+      addTextElement(row, "td", "settlement-cell row-balance-value", hasItemData ? formatMoney(rowTotals.balance) : "");
       tbody.appendChild(row);
     });
-    document.getElementById("memoGrandTotal").textContent = totals.total ? formatMoney(totals.total) : "";
+    document.getElementById("memoGrandTotal").textContent = hasAnyData ? formatMoney(totals.total) : "";
     document.getElementById("memoAdvanceTotal").textContent = totals.advance ? formatMoney(totals.advance) : "";
-    document.getElementById("memoBalanceTotal").textContent = totals.total || totals.advance ? formatMoney(totals.balance) : "";
+    document.getElementById("memoBalanceTotal").textContent = hasAnyData ? formatMoney(totals.balance) : "";
   };
 
   const renderItemEditorSummaries = (totals) => {
