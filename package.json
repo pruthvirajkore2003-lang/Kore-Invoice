@@ -9,6 +9,6 @@
   "scripts": {
     "build": "node scripts/build-static.mjs",
     "build:offline": "node scripts/build-offline.mjs",
-    "test": "npm run build && node --check public/invoice.js && node --check public/memo.js"
+    "test": "npm run build && node --check public/invoice.js && node --check public/memo.js && node --check public/share.js && node scripts/test-dates.mjs && node scripts/test-print-share.mjs"
   }
 }

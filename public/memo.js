@@ -36,10 +36,33 @@
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
   };
   const formatMoney = (value) => money.format(Math.round((value + Number.EPSILON) * 100) / 100);
+  const pad2 = (value) => String(value).padStart(2, "0");
+  // Accepts YYYY-MM-DD, ISO timestamps, D/M/YYYY with / . or - separators, and bare DDMMYYYY.
   const formatDate = (value) => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value || "")) return value || "";
-    const [year, month, day] = value.split("-");
-    return `${day}/${month}/${year}`;
+    const raw = String(value ?? "").trim();
+    if (!raw) return "";
+    const digits = raw.replace(/\D/g, "");
+    let day, month, year;
+    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) [year, month, day] = raw.slice(0, 10).split("-");
+    else if (/^\d{1,2}[/.-]\d{1,2}[/.-]\d{4}$/.test(raw)) [day, month, year] = raw.split(/[/.-]/);
+    else if (digits.length === 8 && digits === raw) [day, month, year] = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4)];
+    else return raw;
+    if (!(Number(day) >= 1 && Number(day) <= 31 && Number(month) >= 1 && Number(month) <= 12)) return raw;
+    return `${pad2(Number(day))}/${pad2(Number(month))}/${year}`;
+  };
+  const dmyToYmd = (value) => {
+    const match = /^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/(\d{4})$/.exec(formatDate(value));
+    return match ? `${match[3]}-${match[2]}-${match[1]}` : "";
+  };
+  // Types DD/MM/YYYY as the user goes; skipped while deleting so backspace can cross a slash.
+  const maskDateField = (field, inputType) => {
+    if (String(inputType || "").startsWith("delete")) return;
+    if (field.selectionStart !== null && field.selectionStart !== field.value.length) return;
+    const digits = field.value.replace(/\D/g, "").slice(0, 8);
+    let masked = digits.slice(0, 2);
+    if (digits.length >= 2) masked += `/${digits.slice(2, 4)}`;
+    if (digits.length >= 4) masked += `/${digits.slice(4)}`;
+    field.value = masked;
   };
   const normalizeItem = (value) => {
     const source = value && typeof value === "object" ? value : {};
@@ -72,6 +95,7 @@
         savedItems[0].advancePaid = String(saved.advancePaid).slice(0, 80);
       }
       merged.items = savedItems.length ? savedItems : [blankItem()];
+      merged.memoDate = formatDate(merged.memoDate);
       delete merged.advancePaid;
       if (!("agentSignature" in saved) && saved.agentPhone === "8975933293") merged.agentPhone = "";
       return merged;
@@ -264,6 +288,65 @@
     setTimeout(() => window.print(), 280);
   };
 
+  // WhatsApp markdown: *bold*, plain bullets. Empty fields drop out entirely.
+  const memoSummary = () => {
+    const totals = calculate();
+    const itemLines = state.items
+      .map((item, index) => ({ item, row: totals.rows[index] || { total: 0 } }))
+      .filter(({ item }) => itemHasData(item))
+      .map(({ item, row }) => {
+        const detail = [item.bags ? `${item.bags} नग` : "", item.weightKg ? `${item.weightKg} किलो` : ""].filter(Boolean).join(" / ");
+        return `  - ${item.goodsDetails || "माल"}${detail ? ` (${detail})` : ""} = रु. ${formatMoney(row.total)}`;
+      });
+    return [
+      "*STK डिजिटल माल पावती*",
+      state.memoNumber ? `पावती नं.: *${state.memoNumber}*` : "",
+      state.memoDate ? `तारीख: ${formatDate(state.memoDate)}` : "",
+      state.partyName ? `श्री: ${state.partyName}` : "",
+      state.destination ? `मुक्काम: ${state.destination}` : "",
+      state.vehicleNumber ? `मोटार नं.: ${state.vehicleNumber}` : "",
+      state.driverName ? `ड्रायव्हर: ${state.driverName}` : "",
+      itemLines.length ? "*माल तपशील*" : "",
+      ...itemLines,
+      `एकूण भाडे: *रु. ${formatMoney(totals.total)}*`,
+      totals.advance ? `उचल दिली: रु. ${formatMoney(totals.advance)}` : "",
+      `बाकी भाडे: *रु. ${formatMoney(totals.balance)}*`,
+      state.specialNote ? `सूचना: ${state.specialNote}` : "",
+      "",
+      "सुरेश तुकाराम कोरे, माळशिरस - 7057100034",
+    ].filter(Boolean).join("\n");
+  };
+
+  const shareMemoBill = async (button) => {
+    const text = memoSummary();
+    if (!window.STKShare) {
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+      return;
+    }
+    setView("preview");
+    document.title = state.memoNumber ? `STK-Memo-${state.memoNumber}` : "STK-Memo";
+    button.setAttribute("aria-busy", "true");
+    showToast("पावती पाठवण्यासाठी तयार होत आहे");
+    // Let the preview finish laying out, otherwise the snapshot measures zero.
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    try {
+      const result = await window.STKShare.shareBill({
+        element: document.getElementById("memo"),
+        fileName: `${document.title}.png`,
+        title: document.title,
+        text,
+        onFallbackPrint: () => setTimeout(() => window.print(), 500),
+      });
+      if (result === "shared-file") showToast("शेअर करा - WhatsApp निवडा");
+      else if (result === "shared-text") showToast("पावती तपशील मजकूर म्हणून पाठवला");
+      else if (result === "whatsapp-link") showToast("WhatsApp उघडले, PDF स्क्रीन येईल");
+    } catch {
+      showToast("शेअर शक्य नाही - PDF तयार करा");
+    } finally {
+      button.removeAttribute("aria-busy");
+    }
+  };
+
   const resetMemo = () => {
     if (!window.confirm("सध्याची पावती साफ करून नवीन पावती सुरू करायची?")) return;
     state = blankState();
@@ -278,8 +361,21 @@
   render();
   fitPreview();
 
+  const syncDateFromPicker = (native) => {
+    const field = native.closest(".date-input-wrap")?.querySelector("[data-date-field]");
+    if (!field) return;
+    field.value = formatDate(native.value);
+    state[field.name] = field.value;
+    render();
+  };
+
   const updateFormField = (event) => {
     const field = event.target;
+    if (field.matches(".date-picker-native")) {
+      syncDateFromPicker(field);
+      return;
+    }
+    if (field.matches("[data-date-field]")) maskDateField(field, event.inputType);
     if (field.matches("[data-field]")) {
       state[field.name] = field.value;
     } else if (field.matches("[data-item-field]")) {
@@ -294,8 +390,34 @@
     render();
   };
 
-  document.getElementById("memoForm").addEventListener("input", updateFormField);
-  document.getElementById("memoForm").addEventListener("change", updateFormField);
+  const memoForm = document.getElementById("memoForm");
+  memoForm.addEventListener("input", updateFormField);
+  memoForm.addEventListener("change", updateFormField);
+  memoForm.addEventListener("focusout", (event) => {
+    const field = event.target;
+    if (!field.matches("[data-date-field]")) return;
+    const normalized = formatDate(field.value);
+    if (normalized === field.value) return;
+    field.value = normalized;
+    state[field.name] = normalized;
+    render();
+  });
+  memoForm.addEventListener("click", (event) => {
+    const trigger = event.target.closest(".date-picker-trigger");
+    if (!trigger) return;
+    const wrap = trigger.closest(".date-input-wrap");
+    const native = wrap?.querySelector(".date-picker-native");
+    const field = wrap?.querySelector("[data-date-field]");
+    if (!native || !field) return;
+    native.value = dmyToYmd(field.value);
+    if (typeof native.showPicker === "function") {
+      try {
+        native.showPicker();
+        return;
+      } catch { /* Browser blocked the picker; fall back to a plain click. */ }
+    }
+    native.click();
+  });
   document.getElementById("addMemoItem").addEventListener("click", () => {
     if (state.items.length >= MAX_ITEMS) return;
     state.items.push(blankItem());
@@ -317,21 +439,20 @@
   document.getElementById("mobilePreview").addEventListener("click", () => setView("preview"));
   document.getElementById("previewPrint").addEventListener("click", printMemo);
   document.getElementById("newMemo").addEventListener("click", resetMemo);
+  ["shareMemo", "mobileShare"].forEach((id) => {
+    const button = document.getElementById(id);
+    if (button) button.addEventListener("click", () => shareMemoBill(button));
+  });
   window.addEventListener("resize", fitPreview, { passive: true });
 
-  const isMobilePrintDevice = () => (
-    navigator.userAgentData?.mobile === true
-    || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-  );
+  // No zoom compensation: the print stylesheet pins the sheet to exact A4, and any
+  // scaling here is what used to leave the white band on Android.
   const preparePrint = () => {
-    document.documentElement.style.setProperty("--print-zoom", isMobilePrintDevice() ? "0.92" : "1");
     const memo = document.getElementById("memo");
     memo.style.transform = "none";
     memo.style.marginBottom = "0";
   };
   const restorePreview = () => {
-    document.documentElement.style.setProperty("--print-zoom", "1");
     fitPreview();
   };
   const printMedia = window.matchMedia("print");

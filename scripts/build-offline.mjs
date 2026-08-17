@@ -17,12 +17,15 @@ const offlineLinks = {
 async function buildOffline(name, outputName) {
   let html = await readFile(resolve(publicDir, `${name}.html`), "utf8");
   let css = await readFile(resolve(publicDir, `${name}.css`), "utf8");
-  const js = (await readFile(resolve(publicDir, `${name}.js`), "utf8")).replace(/<\/script/gi, "<\\/script");
+  const inlineScript = async (file) => (await readFile(resolve(publicDir, file), "utf8")).replace(/<\/script/gi, "<\\/script");
+  const share = await inlineScript("share.js");
+  const js = await inlineScript(`${name}.js`);
 
   css = css.replaceAll('url("/invoice-paper.png")', `url("data:image/png;base64,${paper}")`);
   html = html
     .replace(`<link rel="stylesheet" href="/${name}.css" />`, `<style>${css}</style>`)
     .replace('src="/signature.png"', `src="data:image/png;base64,${signature}"`)
+    .replace('<script src="/share.js"></script>', `<script>${share}</script>`)
     .replace(`<script src="/${name}.js"></script>`, `<script>${js}</script>`);
   for (const [from, to] of Object.entries(offlineLinks)) html = html.replaceAll(from, to);
 

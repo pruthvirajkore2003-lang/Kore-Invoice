@@ -61,6 +61,35 @@
 
   const formatMoney = (value) => numberFormatter.format(Math.round((value + Number.EPSILON) * 100) / 100);
 
+  const pad2 = (value) => String(value).padStart(2, "0");
+  // Accepts YYYY-MM-DD, ISO timestamps, D/M/YYYY with / . or - separators, and bare DDMMYYYY.
+  const formatDate = (value) => {
+    const raw = String(value ?? "").trim();
+    if (!raw) return "";
+    const digits = raw.replace(/\D/g, "");
+    let day, month, year;
+    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) [year, month, day] = raw.slice(0, 10).split("-");
+    else if (/^\d{1,2}[/.-]\d{1,2}[/.-]\d{4}$/.test(raw)) [day, month, year] = raw.split(/[/.-]/);
+    else if (digits.length === 8 && digits === raw) [day, month, year] = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4)];
+    else return raw;
+    if (!(Number(day) >= 1 && Number(day) <= 31 && Number(month) >= 1 && Number(month) <= 12)) return raw;
+    return `${pad2(Number(day))}/${pad2(Number(month))}/${year}`;
+  };
+  const dmyToYmd = (value) => {
+    const match = /^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/(\d{4})$/.exec(formatDate(value));
+    return match ? `${match[3]}-${match[2]}-${match[1]}` : "";
+  };
+  // Types DD/MM/YYYY as the user goes; skipped while deleting so backspace can cross a slash.
+  const maskDateField = (field, inputType) => {
+    if (String(inputType || "").startsWith("delete")) return;
+    if (field.selectionStart !== null && field.selectionStart !== field.value.length) return;
+    const digits = field.value.replace(/\D/g, "").slice(0, 8);
+    let masked = digits.slice(0, 2);
+    if (digits.length >= 2) masked += `/${digits.slice(2, 4)}`;
+    if (digits.length >= 4) masked += `/${digits.slice(4)}`;
+    field.value = masked;
+  };
+
   const loadState = () => {
     const fallback = blankState();
     try {
@@ -71,6 +100,8 @@
         ...blankItem(),
         ...(saved.items && typeof saved.items[index] === "object" ? saved.items[index] : {}),
       }));
+      merged.invoiceDate = formatDate(merged.invoiceDate);
+      merged.poDate = formatDate(merged.poDate);
       return merged;
     } catch {
       return fallback;
@@ -90,12 +121,6 @@
   const text = (selector, value) => {
     const element = document.querySelector(selector);
     if (element) element.textContent = value ?? "";
-  };
-
-  const formatDate = (value) => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value || "")) return value || "";
-    const [year, month, day] = value.split("-");
-    return `${day}/${month}/${year}`;
   };
 
   const smallNumbers = [
@@ -350,6 +375,61 @@
     setTimeout(() => window.print(), 280);
   };
 
+  // WhatsApp markdown: *bold*, plain bullets. Empty fields drop out entirely.
+  const invoiceSummary = () => {
+    const totals = calculate();
+    const buyer = String(state.buyerDetails || "").split("\n")[0].trim();
+    const itemLines = state.items
+      .map((item, index) => ({ item, value: totals.supplies[index] }))
+      .filter(({ item }) => String(item.particulars || "").trim())
+      .map(({ item, value }) => `  - ${item.particulars}${item.quantity ? ` x ${item.quantity} ${item.uom || ""}`.trimEnd() : ""} = INR ${formatMoney(value || 0)}`);
+    return [
+      "*STK - Tax Invoice*",
+      state.invoiceNumber ? `Invoice no: *${state.invoiceNumber}*` : "",
+      state.invoiceDate ? `Date: ${formatDate(state.invoiceDate)}` : "",
+      buyer ? `Buyer: ${buyer}` : "",
+      state.poNumber ? `PO: ${state.poNumber}${state.poDate ? ` (${formatDate(state.poDate)})` : ""}` : "",
+      state.truckNumber ? `Truck: ${state.truckNumber}` : "",
+      itemLines.length ? "*Items*" : "",
+      ...itemLines,
+      `Grand total: *INR ${formatMoney(totals.grandTotal)}*`,
+      amountInWords(totals.grandTotal),
+      state.paymentStatus ? `Payment: ${state.paymentStatus}` : "",
+      "",
+      "Suresh Tukaram Kore, Malshiras",
+    ].filter(Boolean).join("\n");
+  };
+
+  const shareInvoiceBill = async (button) => {
+    const text = invoiceSummary();
+    if (!window.STKShare) {
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+      return;
+    }
+    setView("preview");
+    document.title = state.invoiceNumber ? `Invoice-${state.invoiceNumber}` : "STK-Invoice";
+    button.setAttribute("aria-busy", "true");
+    showToast("Preparing invoice to share");
+    // Let the preview finish laying out, otherwise the snapshot measures zero.
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    try {
+      const result = await window.STKShare.shareBill({
+        element: document.getElementById("invoice"),
+        fileName: `${document.title}.png`,
+        title: document.title,
+        text,
+        onFallbackPrint: () => setTimeout(() => window.print(), 500),
+      });
+      if (result === "shared-file") showToast("Shared - pick WhatsApp in the share sheet");
+      else if (result === "shared-text") showToast("Invoice details shared as text");
+      else if (result === "whatsapp-link") showToast("WhatsApp opened, PDF dialog follows");
+    } catch {
+      showToast("Share unavailable - use Create PDF");
+    } finally {
+      button.removeAttribute("aria-busy");
+    }
+  };
+
   const resetInvoice = () => {
     if (!window.confirm("Clear current invoice and start new?")) return;
     state = blankState();
@@ -367,8 +447,21 @@
   render();
   fitPreview();
 
+  const syncDateFromPicker = (native) => {
+    const field = native.closest(".date-input-wrap")?.querySelector("[data-date-field]");
+    if (!field) return;
+    field.value = formatDate(native.value);
+    state[field.name] = field.value;
+    render();
+  };
+
   const handleFieldInput = (event) => {
     const field = event.target;
+    if (field.matches(".date-picker-native")) {
+      syncDateFromPicker(field);
+      return;
+    }
+    if (field.matches("[data-date-field]")) maskDateField(field, event.inputType);
     if (field.matches("[data-field]")) {
       state[field.name] = field.value;
     } else if (field.matches("[data-item-field]")) {
@@ -395,27 +488,52 @@
     render();
   };
 
-  document.getElementById("invoiceForm").addEventListener("input", handleFieldInput);
-  document.getElementById("invoiceForm").addEventListener("change", handleFieldInput);
+  const invoiceForm = document.getElementById("invoiceForm");
+  invoiceForm.addEventListener("input", handleFieldInput);
+  invoiceForm.addEventListener("change", handleFieldInput);
+  invoiceForm.addEventListener("focusout", (event) => {
+    const field = event.target;
+    if (!field.matches("[data-date-field]")) return;
+    const normalized = formatDate(field.value);
+    if (normalized === field.value) return;
+    field.value = normalized;
+    state[field.name] = normalized;
+    render();
+  });
+  invoiceForm.addEventListener("click", (event) => {
+    const trigger = event.target.closest(".date-picker-trigger");
+    if (!trigger) return;
+    const wrap = trigger.closest(".date-input-wrap");
+    const native = wrap?.querySelector(".date-picker-native");
+    const field = wrap?.querySelector("[data-date-field]");
+    if (!native || !field) return;
+    native.value = dmyToYmd(field.value);
+    if (typeof native.showPicker === "function") {
+      try {
+        native.showPicker();
+        return;
+      } catch { /* Browser blocked the picker; fall back to a plain click. */ }
+    }
+    native.click();
+  });
   document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
   document.getElementById("mobilePreview").addEventListener("click", () => setView("preview"));
   document.getElementById("previewPrint").addEventListener("click", printInvoice);
   document.getElementById("newInvoice").addEventListener("click", resetInvoice);
+  ["shareInvoice", "mobileShare"].forEach((id) => {
+    const button = document.getElementById(id);
+    if (button) button.addEventListener("click", () => shareInvoiceBill(button));
+  });
   window.addEventListener("resize", fitPreview, { passive: true });
 
-  const isMobilePrintDevice = () => (
-    navigator.userAgentData?.mobile === true
-    || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-  );
+  // No zoom compensation: the print stylesheet pins the sheet to exact A4, and any
+  // scaling here is what used to leave the white band on Android.
   const preparePrint = () => {
-    document.documentElement.style.setProperty("--print-zoom", isMobilePrintDevice() ? "0.92" : "1");
     const invoice = document.getElementById("invoice");
     invoice.style.transform = "none";
     invoice.style.marginBottom = "0";
   };
   const restorePreview = () => {
-    document.documentElement.style.setProperty("--print-zoom", "1");
     fitPreview();
   };
   const printMedia = window.matchMedia("print");
