@@ -1923,6 +1923,52 @@ select:hover {
     padding: 0 10px;
     font-size: 12px;
   }
+
+  /* OnePlus Nord / Android Chrome: 16px fields stop focus auto-zoom, 44px thumb targets,
+     scroll padding keeps the focused field clear of the action bar and keyboard. */
+  html,
+  .editor-panel {
+    scroll-padding-bottom: 96px;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .date-picker-trigger {
+    right: 0;
+    bottom: 0;
+    width: 44px;
+    height: 44px;
+  }
+
+  .button,
+  .top-actions .button,
+  .switch-button,
+  .mobile-create .button {
+    min-height: 44px;
+  }
+
+  /* Devanagari matras need extra line box room or Chrome clips them on OxygenOS. */
+  .memo-app .editor-panel h1,
+  .memo-app .editor-panel h2,
+  .memo-app .editor-panel h3,
+  .memo-app .editor-panel label,
+  .memo-app .editor-panel input,
+  .memo-app .editor-panel textarea {
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans Devanagari", "Segoe UI", sans-serif;
+    line-height: 1.38;
+  }
 }
 
 /* Android Chrome lays print out against the page box, not the screen viewport: any

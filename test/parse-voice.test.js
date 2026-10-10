@@ -41,6 +41,7 @@ test("POST transcribes, extracts memo JSON, and keeps the key server-side", asyn
   assert.equal(result.success, true);
   assert.equal(result.data.items[0].bags, "100");
   assert.equal(calls[0].init.headers.Authorization, "Bearer test-key");
+  assert.equal(calls[0].init.body.get("language"), "mr");
   assert.match(JSON.parse(calls[1].init.body).messages[0].content, /माल पावती[\s\S]*10\/10\/2026/);
   assert.ok(!JSON.stringify(result).includes("test-key"));
   delete process.env.GROQ_API_KEY;

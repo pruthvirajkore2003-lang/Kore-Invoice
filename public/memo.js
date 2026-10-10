@@ -264,6 +264,7 @@
   };
 
   const setView = (view) => {
+    document.activeElement?.blur();
     document.body.classList.toggle("view-preview", view === "preview");
     document.body.classList.toggle("view-editor", view !== "preview");
     document.querySelectorAll("[data-view]").forEach((button) => {
@@ -477,6 +478,7 @@
     },
   });
   window.addEventListener("resize", fitPreview, { passive: true });
+  window.visualViewport?.addEventListener("resize", fitPreview, { passive: true });
 
   // No zoom compensation: the print stylesheet pins the sheet to exact A4, and any
   // scaling here is what used to leave the white band on Android.

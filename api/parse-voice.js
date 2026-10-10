@@ -13,14 +13,18 @@ const cors = {
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
+// Whisper reads the prompt as preceding transcript, so it is written the way we want output: Devanagari Marathi, Latin only for codes.
 const WHISPER_PROMPT =
-  "Marathi, Hindi and Indian English bill dictation. मका, हरभरा, गहू, ज्वारी, बाजरी, सोयाबीन, तूर, पोती, क्विंटल, किलो, भाडे, उचल, बाकी, पावती, मोटार, ड्रायव्हर. Maize makka, chana, wheat, jowar, bajra, quintal, bags, freight, advance, GST, invoice, PO.";
+  "आज शंभर पोती मका, दीडशे क्विंटल हरभरा, गहू, ज्वारी, सोयाबीन. भाडे दर तीस रुपये, पाच हजार उचल, बाकी. गाडी नंबर MH12AB1234, ड्रायव्हर, मालक. GST बिल, पावती.";
+// ISO-639-1. Without it Whisper auto-detects and often returns English for code-mixed Marathi. Empty = auto-detect.
+const STT_LANGUAGE = process.env.STT_LANGUAGE ?? "mr";
 
 const COMMON = `You fill a form for an Indian agricultural trader from a spoken note (Marathi, Hindi, English or mixed).
 Return ONLY a JSON object with the keys listed below. Omit any key that was not spoken; never invent values.
 All values are strings. Numbers use plain Western digits (convert Marathi/Hindi digits and number words), optional decimal point, no commas, no units, no currency symbols.
 Dates are DD/MM/YYYY. Resolve relative dates (आज/aaj/today, काल/kal/yesterday) against today's date given below.
-Keep personal names, places and addresses in the language/script they were spoken.`;
+Keep personal names, places and addresses in the language/script they were spoken.
+The transcript is usually Devanagari Marathi; English words may appear transliterated (एडव्हान्स=advance, जीएसटी=GST, एम एच बारा=MH12). Spoken letters/digits of vehicle numbers, PAN and GSTIN must be joined into the code.`;
 
 const PROMPTS = {
   invoice: `${COMMON}
@@ -69,6 +73,7 @@ export async function POST(request) {
   try {
     const upload = new FormData();
     upload.append("model", "whisper-large-v3");
+    if (STT_LANGUAGE) upload.append("language", STT_LANGUAGE);
     upload.append("prompt", WHISPER_PROMPT);
     upload.append("temperature", "0");
     upload.append("response_format", "json");

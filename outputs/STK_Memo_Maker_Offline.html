@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
   <meta name="theme-color" content="#7b281e" />
   <title>STK डिजिटल माल पावती</title>
   <style>:root {
@@ -1931,6 +1931,52 @@ select:hover {
     padding: 0 10px;
     font-size: 12px;
   }
+
+  /* OnePlus Nord / Android Chrome: 16px fields stop focus auto-zoom, 44px thumb targets,
+     scroll padding keeps the focused field clear of the action bar and keyboard. */
+  html,
+  .editor-panel {
+    scroll-padding-bottom: 96px;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .date-picker-trigger {
+    right: 0;
+    bottom: 0;
+    width: 44px;
+    height: 44px;
+  }
+
+  .button,
+  .top-actions .button,
+  .switch-button,
+  .mobile-create .button {
+    min-height: 44px;
+  }
+
+  /* Devanagari matras need extra line box room or Chrome clips them on OxygenOS. */
+  .memo-app .editor-panel h1,
+  .memo-app .editor-panel h2,
+  .memo-app .editor-panel h3,
+  .memo-app .editor-panel label,
+  .memo-app .editor-panel input,
+  .memo-app .editor-panel textarea {
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans Devanagari", "Segoe UI", sans-serif;
+    line-height: 1.38;
+  }
 }
 
 /* Android Chrome lays print out against the page box, not the screen viewport: any
@@ -2822,6 +2868,7 @@ select:hover {
   };
 
   const setView = (view) => {
+    document.activeElement?.blur();
     document.body.classList.toggle("view-preview", view === "preview");
     document.body.classList.toggle("view-editor", view !== "preview");
     document.querySelectorAll("[data-view]").forEach((button) => {
@@ -3035,6 +3082,7 @@ select:hover {
     },
   });
   window.addEventListener("resize", fitPreview, { passive: true });
+  window.visualViewport?.addEventListener("resize", fitPreview, { passive: true });
 
   // No zoom compensation: the print stylesheet pins the sheet to exact A4, and any
   // scaling here is what used to leave the white band on Android.
