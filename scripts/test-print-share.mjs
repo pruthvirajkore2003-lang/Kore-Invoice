@@ -74,6 +74,8 @@ for (const app of apps) {
   assert.ok(html.includes(`id="${app.shareId}"`), `${app.html}: toolbar share button missing`);
   assert.ok(html.includes('id="mobileShare"'), `${app.html}: mobile share button missing`);
   assert.ok(html.includes('<script src="/share.js"></script>'), `${app.html}: share.js not loaded`);
+  assert.ok(html.includes('id="voiceFillBtn"'), `${app.html}: voice button missing`);
+  assert.ok(html.indexOf("/voice.js") > 0 && html.indexOf("/voice.js") < html.indexOf(app.css.replace("public/", "/").replace(".css", ".js")), `${app.html}: voice.js must load before page script`);
   assert.ok(html.indexOf("/share.js") < html.indexOf(app.css.replace("public/", "/").replace(".css", ".js")), `${app.html}: share.js must load first`);
 }
 
@@ -83,6 +85,7 @@ for (const app of apps) {
   const bundle = await read(app.bundle);
   assert.ok(bundle.includes("window.STKShare"), `${app.bundle}: share pipeline not inlined`);
   assert.ok(bundle.includes("shareBill"), `${app.bundle}: shareBill missing`);
+  assert.ok(bundle.includes("window.STKVoice"), `${app.bundle}: voice pipeline not inlined`);
   assert.ok(!/<script[^>]+src=/.test(bundle), `${app.bundle}: external script tag`);
   assert.ok(!/<link[^>]+stylesheet/.test(bundle), `${app.bundle}: external stylesheet link`);
   assert.ok(!bundle.includes("--print-zoom"), `${app.bundle}: stale --print-zoom`);
@@ -90,7 +93,9 @@ for (const app of apps) {
 
   const remoteUrls = (bundle.match(/https?:\/\/[^"'\s)]+/g) || [])
     .filter((url) => !url.startsWith("http://www.w3.org/"))
-    .filter((url) => !url.startsWith("https://api.whatsapp.com/"));
+    .filter((url) => !url.startsWith("https://api.whatsapp.com/"))
+    // User-initiated voice fill; the button toasts a manual-entry fallback when offline.
+    .filter((url) => url !== "https://www.korewebs.site/api/parse-voice");
   assert.deepEqual(remoteUrls, [], `${app.bundle}: unexpected remote URLs`);
 }
 

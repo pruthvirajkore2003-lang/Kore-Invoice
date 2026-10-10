@@ -183,6 +183,51 @@ select:focus-visible {
   width: 100%;
 }
 
+.button.voice-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-color: #cbd9d4;
+  background: white;
+  color: var(--ink);
+}
+
+.button.voice-btn[data-voice-state="recording"] {
+  border-color: #c62828;
+  background: #c62828;
+  color: white;
+  animation: voice-pulse 1.2s ease-out infinite;
+}
+
+.button.voice-btn[data-voice-state="processing"] {
+  opacity: 0.75;
+  cursor: progress;
+}
+
+.button.voice-btn[data-voice-state="processing"]::after {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: voice-spin 0.8s linear infinite;
+}
+
+@keyframes voice-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(198, 40, 40, 0.55); }
+  100% { box-shadow: 0 0 0 12px rgba(198, 40, 40, 0); }
+}
+
+@keyframes voice-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button.voice-btn[data-voice-state] { animation: none !important; }
+  .button.voice-btn[data-voice-state="processing"]::after { animation: none; }
+}
+
 .app-shell {
   width: min(1540px, 100%);
   margin: 0 auto;

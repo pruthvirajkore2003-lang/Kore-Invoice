@@ -191,6 +191,51 @@ select:focus-visible {
   width: 100%;
 }
 
+.button.voice-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-color: #cbd9d4;
+  background: white;
+  color: var(--ink);
+}
+
+.button.voice-btn[data-voice-state="recording"] {
+  border-color: #c62828;
+  background: #c62828;
+  color: white;
+  animation: voice-pulse 1.2s ease-out infinite;
+}
+
+.button.voice-btn[data-voice-state="processing"] {
+  opacity: 0.75;
+  cursor: progress;
+}
+
+.button.voice-btn[data-voice-state="processing"]::after {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: voice-spin 0.8s linear infinite;
+}
+
+@keyframes voice-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(198, 40, 40, 0.55); }
+  100% { box-shadow: 0 0 0 12px rgba(198, 40, 40, 0); }
+}
+
+@keyframes voice-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button.voice-btn[data-voice-state] { animation: none !important; }
+  .button.voice-btn[data-voice-state="processing"]::after { animation: none; }
+}
+
 .app-shell {
   width: min(1540px, 100%);
   margin: 0 auto;
@@ -1231,6 +1276,7 @@ select:hover {
     </div>
     <div class="top-actions">
       <a class="button doc-switch" href="STK_Memo_Maker_Offline.html">माल पावती</a>
+      <button class="button voice-btn" id="voiceFillBtn" type="button" title="Speak to fill form">🎤 <span class="voice-btn-label">Voice fill</span></button>
       <button class="button ghost" id="newInvoice" type="button">New invoice</button>
     </div>
   </header>
@@ -1638,6 +1684,116 @@ select:hover {
   <script>(() => {
   "use strict";
 
+  // Groq key lives only in the Vercel Function (api/parse-voice.js). Offline file:// bundles call the deployed site.
+  const ENDPOINT = location.protocol === "file:" ? "https://www.korewebs.site/api/parse-voice" : "/api/parse-voice";
+  const MAX_RECORDING_MS = 60000;
+  const OFFLINE_MESSAGE = "Voice fill requires internet. You can still fill the form manually.";
+
+  const pickMimeType = () => {
+    if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") return "";
+    return ["audio/webm;codecs=opus", "audio/mp4", "audio/webm"].find((type) => MediaRecorder.isTypeSupported(type)) || "";
+  };
+
+  const todayDmy = () => {
+    const now = new Date();
+    return `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
+  };
+
+  // Sends a recorded clip to the Edge Function; resolves { transcript, data } or throws with a user-facing message.
+  const recordAndParse = async (blob, docType) => {
+    if (navigator.onLine === false) throw new Error(OFFLINE_MESSAGE);
+    const form = new FormData();
+    form.append("audio", blob, `voice.${/mp4|m4a|aac/.test(blob.type) ? "mp4" : "webm"}`);
+    form.append("docType", docType);
+    form.append("currentDate", todayDmy());
+    let response;
+    try {
+      response = await fetch(ENDPOINT, { method: "POST", body: form, signal: AbortSignal.timeout?.(45000) });
+    } catch {
+      throw new Error(OFFLINE_MESSAGE);
+    }
+    const body = await response.json().catch(() => null);
+    if (!response.ok || !body?.success) throw new Error("Voice fill failed. Please try again or fill manually.");
+    return { transcript: String(body.transcript || ""), data: body.data && typeof body.data === "object" ? body.data : {} };
+  };
+
+  // Tap once to record, tap again (or wait 60 s) to stop and parse. Never touches form fields itself.
+  const initVoiceButton = (button, { docType, toast, onResult }) => {
+    if (!button) return;
+    const label = button.querySelector(".voice-btn-label");
+    const idleLabel = label?.textContent || "";
+    let recorder = null;
+    let stopTimer;
+
+    const setState = (state) => {
+      button.dataset.voiceState = state;
+      button.setAttribute("aria-pressed", String(state === "recording"));
+      button.setAttribute("aria-busy", String(state === "processing"));
+      if (label) label.textContent = state === "recording" ? "Stop" : state === "processing" ? "Reading..." : idleLabel;
+    };
+    setState("inactive");
+
+    const start = async () => {
+      if (navigator.onLine === false) return toast(OFFLINE_MESSAGE);
+      if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+        return toast("Voice recording is not supported in this browser. Please fill manually.");
+      }
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch {
+        return toast("Microphone permission denied. Please allow mic access or fill manually.");
+      }
+      const mimeType = pickMimeType();
+      const chunks = [];
+      try {
+        recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      } catch {
+        stream.getTracks().forEach((track) => track.stop());
+        return toast("Voice recording is not supported in this browser. Please fill manually.");
+      }
+      recorder.addEventListener("dataavailable", (event) => event.data.size && chunks.push(event.data));
+      recorder.addEventListener("stop", async () => {
+        clearTimeout(stopTimer);
+        stream.getTracks().forEach((track) => track.stop());
+        const blob = new Blob(chunks, { type: recorder.mimeType || mimeType || "audio/webm" });
+        recorder = null;
+        if (!blob.size) {
+          setState("inactive");
+          return toast("No audio captured. Please try again.");
+        }
+        setState("processing");
+        toast("Reading your voice note...");
+        try {
+          const result = await recordAndParse(blob, docType);
+          if (!result.transcript) toast("Could not hear anything. Please try again.");
+          else onResult(result);
+        } catch (error) {
+          toast(error.message);
+        } finally {
+          setState("inactive");
+        }
+      });
+      recorder.start();
+      setState("recording");
+      toast("Listening... tap 🎤 again to stop");
+      stopTimer = setTimeout(() => recorder?.state === "recording" && recorder.stop(), MAX_RECORDING_MS);
+    };
+
+    button.addEventListener("click", () => {
+      const state = button.dataset.voiceState;
+      if (state === "processing") return;
+      if (state === "recording") recorder?.stop();
+      else start().catch(() => { setState("inactive"); toast("Voice fill failed. Please fill manually."); });
+    });
+  };
+
+  window.STKVoice = { initVoiceButton, recordAndParse };
+})();
+</script>
+  <script>(() => {
+  "use strict";
+
   const STORAGE_KEY = "stk-invoice-draft-v1";
   const ITEM_COUNT = 6;
   const itemFields = ["particulars", "hsn", "bags", "uom", "quantity", "rate"];
@@ -1998,11 +2154,13 @@ select:hover {
     invoice.style.marginBottom = scale < 1 ? `${-invoice.offsetHeight * (1 - scale)}px` : "0";
   };
 
+  let toastTimer;
   const showToast = (message) => {
     const toast = document.getElementById("toast");
     toast.textContent = message;
     toast.classList.add("show");
-    setTimeout(() => toast.classList.remove("show"), 2600);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
   };
 
   const printInvoice = () => {
@@ -2076,6 +2234,38 @@ select:hover {
     render();
     setView("editor");
     showToast("New blank invoice ready");
+  };
+
+  // Voice data is untrusted model output: whitelist keys, coerce types, only fill what was spoken.
+  const VOICE_NUMBER_FIELDS = new Set(["bags", "quantity", "rate", "igstRate", "sgstRate", "cgstRate", "freight"]);
+  const PAYMENT_STATUSES = ["PENDING", "PAID", "PARTIALLY PAID"];
+  const voiceValue = (key, value) => {
+    if (typeof value !== "string" && typeof value !== "number") return "";
+    const raw = String(value).trim().slice(0, 500);
+    if (VOICE_NUMBER_FIELDS.has(key)) return parseNumber(raw) ? String(parseNumber(raw)) : "";
+    if (key === "paymentStatus") return PAYMENT_STATUSES.includes(raw.toUpperCase()) ? raw.toUpperCase() : "";
+    return key.endsWith("Date") ? formatDate(raw) : raw;
+  };
+
+  const applyVoiceData = (data) => {
+    Object.keys(blankState()).forEach((key) => {
+      const value = key === "items" ? "" : voiceValue(key, data[key]);
+      if (value) state[key] = value;
+    });
+    // Spoken items go into the first empty rows; rows the user already filled stay untouched.
+    let slot = 0;
+    (Array.isArray(data.items) ? data.items : []).forEach((spoken) => {
+      if (!spoken || typeof spoken !== "object") return;
+      const item = Object.fromEntries(itemFields.map((field) => [field, voiceValue(field, spoken[field])]));
+      if (!itemFields.some((field) => item[field])) return;
+      while (slot < ITEM_COUNT && itemFields.some((field) => String(state.items[slot][field] || "").trim())) slot += 1;
+      if (slot >= ITEM_COUNT) return;
+      const grain = GRAINS.find(([name]) => name === item.particulars);
+      if (grain && !item.hsn) item.hsn = grain[1];
+      state.items[slot] = item;
+    });
+    applyStateToForm();
+    render();
   };
 
   createItemEditors();
@@ -2160,6 +2350,15 @@ select:hover {
   ["shareInvoice", "mobileShare"].forEach((id) => {
     const button = document.getElementById(id);
     if (button) button.addEventListener("click", () => shareInvoiceBill(button));
+  });
+  window.STKVoice?.initVoiceButton(document.getElementById("voiceFillBtn"), {
+    docType: "invoice",
+    toast: showToast,
+    onResult: ({ transcript, data }) => {
+      applyVoiceData(data);
+      setView("preview");
+      showToast(`Filled from voice: "${transcript.length > 70 ? `${transcript.slice(0, 70)}...` : transcript}"`);
+    },
   });
   window.addEventListener("resize", fitPreview, { passive: true });
 

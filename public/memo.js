@@ -274,11 +274,13 @@
     if (view === "preview") requestAnimationFrame(() => { fitPreview(); window.scrollTo({ top: 0, behavior: "smooth" }); });
   };
 
+  let toastTimer;
   const showToast = (message) => {
     const toast = document.getElementById("toast");
     toast.textContent = message;
     toast.classList.add("show");
-    setTimeout(() => toast.classList.remove("show"), 2500);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 2500);
   };
 
   const printMemo = () => {
@@ -355,6 +357,28 @@
     render();
     setView("editor");
     showToast("नवीन कोरी पावती तयार");
+  };
+
+  // Voice data is untrusted model output: whitelist keys, coerce types, only fill what was spoken.
+  const VOICE_NUMBER_FIELDS = ["weightKg", "bags", "freightRate", "manualTotal", "advancePaid"];
+  const applyVoiceData = (data) => {
+    Object.keys(blankState()).forEach((key) => {
+      const raw = data[key];
+      if (key === "items" || (typeof raw !== "string" && typeof raw !== "number")) return;
+      const value = String(raw).trim().slice(0, 500);
+      if (value) state[key] = key === "memoDate" ? formatDate(value) : value;
+    });
+    // Spoken items replace empty cards first, then append up to MAX_ITEMS; filled cards stay untouched.
+    (Array.isArray(data.items) ? data.items : []).forEach((spoken) => {
+      const item = normalizeItem(spoken);
+      VOICE_NUMBER_FIELDS.forEach((key) => { item[key] = numeric(item[key]) ? String(numeric(item[key])) : ""; });
+      if (!itemHasData(item)) return;
+      const empty = state.items.findIndex((existing) => !itemHasData(existing));
+      if (empty >= 0) state.items[empty] = item;
+      else if (state.items.length < MAX_ITEMS) state.items.push(item);
+    });
+    applyState();
+    render();
   };
 
   applyState();
@@ -442,6 +466,15 @@
   ["shareMemo", "mobileShare"].forEach((id) => {
     const button = document.getElementById(id);
     if (button) button.addEventListener("click", () => shareMemoBill(button));
+  });
+  window.STKVoice?.initVoiceButton(document.getElementById("voiceFillBtn"), {
+    docType: "memo",
+    toast: showToast,
+    onResult: ({ transcript, data }) => {
+      applyVoiceData(data);
+      setView("preview");
+      showToast(`आवाजातून माहिती भरली: "${transcript.length > 70 ? `${transcript.slice(0, 70)}...` : transcript}"`);
+    },
   });
   window.addEventListener("resize", fitPreview, { passive: true });
 

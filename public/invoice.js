@@ -361,11 +361,13 @@
     invoice.style.marginBottom = scale < 1 ? `${-invoice.offsetHeight * (1 - scale)}px` : "0";
   };
 
+  let toastTimer;
   const showToast = (message) => {
     const toast = document.getElementById("toast");
     toast.textContent = message;
     toast.classList.add("show");
-    setTimeout(() => toast.classList.remove("show"), 2600);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
   };
 
   const printInvoice = () => {
@@ -439,6 +441,38 @@
     render();
     setView("editor");
     showToast("New blank invoice ready");
+  };
+
+  // Voice data is untrusted model output: whitelist keys, coerce types, only fill what was spoken.
+  const VOICE_NUMBER_FIELDS = new Set(["bags", "quantity", "rate", "igstRate", "sgstRate", "cgstRate", "freight"]);
+  const PAYMENT_STATUSES = ["PENDING", "PAID", "PARTIALLY PAID"];
+  const voiceValue = (key, value) => {
+    if (typeof value !== "string" && typeof value !== "number") return "";
+    const raw = String(value).trim().slice(0, 500);
+    if (VOICE_NUMBER_FIELDS.has(key)) return parseNumber(raw) ? String(parseNumber(raw)) : "";
+    if (key === "paymentStatus") return PAYMENT_STATUSES.includes(raw.toUpperCase()) ? raw.toUpperCase() : "";
+    return key.endsWith("Date") ? formatDate(raw) : raw;
+  };
+
+  const applyVoiceData = (data) => {
+    Object.keys(blankState()).forEach((key) => {
+      const value = key === "items" ? "" : voiceValue(key, data[key]);
+      if (value) state[key] = value;
+    });
+    // Spoken items go into the first empty rows; rows the user already filled stay untouched.
+    let slot = 0;
+    (Array.isArray(data.items) ? data.items : []).forEach((spoken) => {
+      if (!spoken || typeof spoken !== "object") return;
+      const item = Object.fromEntries(itemFields.map((field) => [field, voiceValue(field, spoken[field])]));
+      if (!itemFields.some((field) => item[field])) return;
+      while (slot < ITEM_COUNT && itemFields.some((field) => String(state.items[slot][field] || "").trim())) slot += 1;
+      if (slot >= ITEM_COUNT) return;
+      const grain = GRAINS.find(([name]) => name === item.particulars);
+      if (grain && !item.hsn) item.hsn = grain[1];
+      state.items[slot] = item;
+    });
+    applyStateToForm();
+    render();
   };
 
   createItemEditors();
@@ -523,6 +557,15 @@
   ["shareInvoice", "mobileShare"].forEach((id) => {
     const button = document.getElementById(id);
     if (button) button.addEventListener("click", () => shareInvoiceBill(button));
+  });
+  window.STKVoice?.initVoiceButton(document.getElementById("voiceFillBtn"), {
+    docType: "invoice",
+    toast: showToast,
+    onResult: ({ transcript, data }) => {
+      applyVoiceData(data);
+      setView("preview");
+      showToast(`Filled from voice: "${transcript.length > 70 ? `${transcript.slice(0, 70)}...` : transcript}"`);
+    },
   });
   window.addEventListener("resize", fitPreview, { passive: true });
 
