@@ -1,6 +1,6 @@
 // Speech-to-text and free-text extraction over any OpenAI-compatible API (Groq default, OpenAI works too).
 const config = () => {
-  const { AI_API_KEY, AI_BASE_URL = "https://api.groq.com/openai/v1", STT_MODEL = "whisper-large-v3", LLM_MODEL = "llama-3.3-70b-versatile" } = process.env;
+  const { AI_API_KEY, AI_BASE_URL = "https://api.groq.com/openai/v1", STT_MODEL = "whisper-large-v3", LLM_MODEL = "openai/gpt-oss-120b" } = process.env;
   if (!AI_API_KEY) throw new Error("AI_API_KEY is not set; voice and free-text input are disabled");
   return { key: AI_API_KEY, base: AI_BASE_URL.replace(/\/$/, ""), sttModel: STT_MODEL, llmModel: LLM_MODEL };
 };
