@@ -469,12 +469,13 @@
     try {
       const result = await window.STKShare.shareBill({
         element: document.getElementById("invoice"),
-        fileName: `${document.title}.png`,
+        fileName: `${document.title}.pdf`,
         title: document.title,
         text,
-        onFallbackPrint: () => setTimeout(() => window.print(), 500),
       });
       if (result === "shared-file") showToast(t("common.toast.sharedFile"));
+      // Sticky: WhatsApp Web takes focus, so a timed toast would expire unseen in this tab.
+      else if (result === "downloaded-pdf") showToast(t("common.toast.pdfDownloaded"), true);
       else if (result === "shared-text") showToast(t("inv.toast.sharedText"));
       else if (result === "whatsapp-link") showToast(t("common.toast.whatsapp"));
     } catch {

@@ -1648,7 +1648,8 @@ select:hover {
     "common.createPdf": ["Create PDF", "PDF तयार करा"],
     "common.toast.print": ["Choose Save as PDF in print screen", "Print मध्ये Save as PDF निवडा"],
     "common.toast.sharedFile": ["Shared - pick WhatsApp in the share sheet", "शेअर करा - WhatsApp निवडा"],
-    "common.toast.whatsapp": ["WhatsApp opened, PDF dialog follows", "WhatsApp उघडले, PDF स्क्रीन येईल"],
+    "common.toast.pdfDownloaded": ["PDF downloaded! Attach it in WhatsApp", "PDF डाउनलोड झाली! WhatsApp मध्ये जोडा"],
+    "common.toast.whatsapp": ["WhatsApp opened - use Create PDF for the bill file", "WhatsApp उघडले - बिलाच्या फाइलसाठी PDF तयार करा"],
     "common.toast.shareFailed": ["Share unavailable - use Create PDF", "शेअर शक्य नाही - PDF तयार करा"],
     "common.toast.voiceFilled": ["Filled from voice: \"{text}\"", "आवाजातून माहिती भरली: \"{text}\""],
     "common.convert.working": ["Changing typed details to English...", "भरलेली माहिती मराठीत बदलत आहे..."],
@@ -2137,14 +2138,16 @@ select:hover {
 </script>
   <script>/* Shared share pipeline for the invoice and memo apps.
    Offline by construction: no libraries, no CDN, no network calls. The bill is
-   rasterised locally through an SVG <foreignObject> snapshot and handed to the OS
-   share sheet (WhatsApp sits at the top of it on Android). Every step degrades:
-   file share -> text share -> WhatsApp link + print. */
+   rasterised locally through an SVG <foreignObject> snapshot, wrapped in a one-page
+   A4 PDF and handed to the OS share sheet (WhatsApp sits at the top of it on Android).
+   Every step degrades: PDF share -> PDF download + WhatsApp Web -> text share -> WhatsApp link. */
 (() => {
   "use strict";
 
   const RENDER_TIMEOUT_MS = 6000;
-  const MAX_SCALE = 2;
+  const SCALE = 2;
+  const JPEG_QUALITY = 0.95;
+  const A4_POINTS = [595.28, 841.89];
 
   const collectCss = () => {
     const parts = [];
@@ -2224,7 +2227,8 @@ select:hover {
     image.src = source;
   });
 
-  const renderToPngBlob = async (element) => {
+  // Always 2x (~192 dpi on A4): the PDF gets printed, so screen DPR is irrelevant here.
+  const renderToJpeg = async (element) => {
     // offsetWidth/Height ignore the preview's CSS scale transform, so this is the
     // natural A4 pixel size no matter how the preview is currently fitted.
     const width = element.offsetWidth;
@@ -2233,57 +2237,127 @@ select:hover {
 
     const markup = buildSvgMarkup(element, width, height);
     const image = await loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`);
-    const scale = Math.min(MAX_SCALE, Math.max(1, window.devicePixelRatio || 1));
     const canvas = document.createElement("canvas");
-    canvas.width = Math.round(width * scale);
-    canvas.height = Math.round(height * scale);
+    canvas.width = Math.round(width * SCALE);
+    canvas.height = Math.round(height * SCALE);
     const context = canvas.getContext("2d");
-    context.fillStyle = "#ffffff";
+    context.fillStyle = "#ffffff"; // JPEG has no alpha; transparent areas would turn black.
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-    return new Promise((resolve) => {
+    const blob = await new Promise((resolve) => {
       try {
-        canvas.toBlob((blob) => resolve(blob), "image/png");
+        canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY);
       } catch {
         resolve(null); // Tainted canvas (some WebKit builds taint foreignObject).
       }
     });
+    if (!blob) return null;
+    return { bytes: new Uint8Array(await blob.arrayBuffer()), width: canvas.width, height: canvas.height };
+  };
+
+  // One byte per char; every string written below is ASCII apart from the binary marker.
+  const latin1 = (text) => Uint8Array.from(text, (char) => char.charCodeAt(0));
+
+  /* Minimal PDF 1.4: one A4 page showing one JPEG. /DCTDecode lets the JPEG bytes go in
+     untouched, so no compressor is needed. xref offsets are byte positions, hence the
+     byte arrays rather than strings. */
+  const jpegToPdf = ({ bytes, width, height }) => {
+    const [pageWidth, pageHeight] = A4_POINTS;
+    const fit = Math.min(pageWidth / width, pageHeight / height);
+    const drawWidth = width * fit;
+    const drawHeight = height * fit;
+    const x = (pageWidth - drawWidth) / 2;
+    const y = (pageHeight - drawHeight) / 2;
+    const content = `q ${drawWidth.toFixed(2)} 0 0 ${drawHeight.toFixed(2)} ${x.toFixed(2)} ${y.toFixed(2)} cm /Im0 Do Q`;
+    const objects = [
+      ["<< /Type /Catalog /Pages 2 0 R >>"],
+      ["<< /Type /Pages /Kids [3 0 R] /Count 1 >>"],
+      [`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`],
+      [`<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${bytes.length} >>\nstream\n`, bytes, "\nendstream"],
+      [`<< /Length ${content.length} >>\nstream\n${content}\nendstream`],
+    ];
+
+    const parts = [];
+    let size = 0;
+    const write = (part) => {
+      const chunk = typeof part === "string" ? latin1(part) : part;
+      parts.push(chunk);
+      size += chunk.length;
+    };
+    // The high-byte comment line tells transfer tools the file is binary.
+    write("%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3\n");
+    const offsets = objects.map((pieces, index) => {
+      const offset = size;
+      write(`${index + 1} 0 obj\n`);
+      pieces.forEach(write);
+      write("\nendobj\n");
+      return offset;
+    });
+    const xref = size;
+    // Each xref entry must be exactly 20 bytes: 10-digit offset, 5-digit generation, type, space + LF.
+    write(`xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`
+      + offsets.map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`).join("")
+      + `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+    return new Blob(parts, { type: "application/pdf" });
+  };
+
+  const renderToPdfBlob = async (element) => {
+    const jpeg = await renderToJpeg(element);
+    return jpeg ? jpegToPdf(jpeg) : null;
+  };
+
+  const downloadBlob = (blob, fileName) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    // The download reads the URL after click() returns; revoking at once can cancel it.
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
   };
 
   const openWhatsApp = (text) => {
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    const opened = window.open(url, "_blank", "noopener");
-    if (!opened) window.location.href = url;
+    // Not the "noopener" feature: with it window.open always returns null, which made the
+    // fallback below navigate this tab away even when the new tab had opened.
+    const opened = window.open(url, "_blank");
+    if (opened) opened.opener = null;
+    else window.location.href = url; // Popup blocked.
   };
 
-  /* Returns one of: "shared-file" | "shared-text" | "cancelled" | "whatsapp-link".
-     Rasterising costs a few hundred ms, well inside the browser's transient user
-     activation window, so navigator.share still counts as gesture-driven. */
-  const shareBill = async ({ element, fileName, title, text, onStatus, onFallbackPrint }) => {
-    const canShare = typeof navigator.share === "function";
-    const canShareFiles = canShare && typeof navigator.canShare === "function";
+  /* Returns one of: "shared-file" | "downloaded-pdf" | "shared-text" | "cancelled" | "whatsapp-link".
+     Rendering costs a few hundred ms, well inside the browser's transient user
+     activation window, so navigator.share still counts as gesture-driven.
+     WhatsApp links carry text only, so where the OS share sheet cannot take the PDF
+     (desktop browsers) it is downloaded for the user to attach by hand. */
+  const shareBill = async ({ element, fileName, title, text }) => {
+    let blob = null;
+    try {
+      if (element) blob = await renderToPdfBlob(element);
+    } catch {
+      blob = null; // Fall through to text sharing.
+    }
 
-    if (canShareFiles && element) {
-      if (onStatus) onStatus("rendering");
-      let file = null;
-      try {
-        const blob = await renderToPngBlob(element);
-        if (blob) file = new File([blob], fileName, { type: "image/png" });
-      } catch {
-        file = null; // Fall through to text sharing.
-      }
-      if (file && navigator.canShare({ files: [file] })) {
+    if (blob) {
+      const file = new File([blob], fileName, { type: "application/pdf" });
+      if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({ files: [file], title, text });
           return "shared-file";
         } catch (error) {
           if (error && error.name === "AbortError") return "cancelled";
+          // NotAllowedError (gesture expired) and the like: hand over the file by download.
         }
       }
+      downloadBlob(blob, fileName);
+      openWhatsApp(text);
+      return "downloaded-pdf";
     }
 
-    if (canShare) {
+    if (typeof navigator.share === "function") {
       try {
         await navigator.share({ title, text });
         return "shared-text";
@@ -2293,11 +2367,10 @@ select:hover {
     }
 
     openWhatsApp(text);
-    if (onFallbackPrint) onFallbackPrint();
     return "whatsapp-link";
   };
 
-  window.STKShare = { shareBill, renderToPngBlob };
+  window.STKShare = { shareBill, renderToPdfBlob };
 })();
 </script>
   <script>(() => {
@@ -2882,12 +2955,13 @@ select:hover {
     try {
       const result = await window.STKShare.shareBill({
         element: document.getElementById("invoice"),
-        fileName: `${document.title}.png`,
+        fileName: `${document.title}.pdf`,
         title: document.title,
         text,
-        onFallbackPrint: () => setTimeout(() => window.print(), 500),
       });
       if (result === "shared-file") showToast(t("common.toast.sharedFile"));
+      // Sticky: WhatsApp Web takes focus, so a timed toast would expire unseen in this tab.
+      else if (result === "downloaded-pdf") showToast(t("common.toast.pdfDownloaded"), true);
       else if (result === "shared-text") showToast(t("inv.toast.sharedText"));
       else if (result === "whatsapp-link") showToast(t("common.toast.whatsapp"));
     } catch {
