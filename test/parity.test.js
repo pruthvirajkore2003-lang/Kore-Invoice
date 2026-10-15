@@ -59,6 +59,50 @@ test("Indian words use Lakh/Crore grouping like the browser", async () => {
   assert.equal(server.amountInWords(12345678.9), "One Crore Twenty Three Lakh Forty Five Thousand Six Hundred Seventy Eight Rupees and Ninety Paise Only");
 });
 
+test("Marathi amount in words uses the 0-99 table, शंभर/एकशे and कोटी/लाख/हजार", async () => {
+  const { amountInWords } = await browserInvoice(invoices[0]);
+  const cases = [
+    [0, "शून्य रुपये फक्त"],
+    [1, "एक रुपया फक्त"],
+    [0.01, "शून्य रुपये आणि एक पैसा फक्त"],
+    [21, "एकवीस रुपये फक्त"],
+    [99, "नव्याण्णव रुपये फक्त"],
+    [100, "शंभर रुपये फक्त"],
+    [101, "एकशे एक रुपये फक्त"],
+    [250, "दोनशे पन्नास रुपये फक्त"],
+    [1100, "एक हजार शंभर रुपये फक्त"],
+    [100000, "एक लाख रुपये फक्त"],
+    [137450, "एक लाख सदतीस हजार चारशे पन्नास रुपये फक्त"],
+    [12345678.9, "एक कोटी तेवीस लाख पंचेचाळीस हजार सहाशे अठ्ठ्याहत्तर रुपये आणि नव्वद पैसे फक्त"],
+    [1e10, "एक हजार कोटी रुपये फक्त"],
+  ];
+  for (const [amount, words] of cases) assert.equal(amountInWords(amount, "mr"), words, `amount ${amount}`);
+  assert.equal(amountInWords(12345678.9), server.amountInWords(12345678.9), "English stays the default");
+});
+
+// Switching language must never change a number on the WhatsApp text.
+const money = (text) => text.match(/\d[\d,]*\.\d{2}/g);
+
+test("invoice summary in Marathi keeps every amount", async () => {
+  for (const state of invoices) {
+    const browser = await browserInvoice(state);
+    const marathi = browser.invoiceSummary("mr");
+    assert.deepEqual(money(marathi), money(browser.invoiceSummary()));
+    assert.match(marathi, /^\*STK - कर बीजक\*/);
+    assert.ok(!/Grand total|Invoice no|Rupees/.test(marathi), marathi);
+  }
+});
+
+test("memo summary in English keeps every amount", async () => {
+  for (const state of memos) {
+    const browser = await browserMemo(state);
+    const english = browser.memoSummary("en");
+    assert.deepEqual(money(english), money(browser.memoSummary()));
+    assert.match(english, /^\*STK Digital Freight Memo\*/);
+    assert.ok(!/एकूण भाडे|बाकी भाडे|पावती नं|रु\./.test(english), english);
+  }
+});
+
 test("fixture spot values", () => {
   assert.equal(server.formatMoney(server.calculateMemo(memos[0]).total), "8,204.13");
   assert.equal(memos[0].items.length, 5);

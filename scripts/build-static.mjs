@@ -22,6 +22,10 @@ const textFiles = {
     type: "text/javascript; charset=utf-8",
     body: await readFile(resolve(root, "public/share.js"), "utf8"),
   },
+  "/i18n.js": {
+    type: "text/javascript; charset=utf-8",
+    body: await readFile(resolve(root, "public/i18n.js"), "utf8"),
+  },
   "/voice.js": {
     type: "text/javascript; charset=utf-8",
     body: await readFile(resolve(root, "public/voice.js"), "utf8"),

@@ -3,7 +3,7 @@
   "buildCommand": "",
   "installCommand": "",
   "outputDirectory": "public",
-  "functions": { "api/parse-voice.js": { "maxDuration": 60 } },
+  "functions": { "api/parse-voice.js": { "maxDuration": 60 }, "api/translate.js": { "maxDuration": 30 } },
   "rewrites": [{ "source": "/", "destination": "/invoice.html" }],
   "headers": [
     {

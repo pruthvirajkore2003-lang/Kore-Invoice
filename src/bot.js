@@ -76,7 +76,8 @@ const assertParity = ({ type, state }, shown) => {
     ? (({ grandTotal }) => [[shown.grandTotal, formatMoney(grandTotal)]])(calculateInvoice(state))
     : (({ total, balance }) => [[shown.memoTotal, formatMoney(total)], [shown.memoBalance, formatMoney(balance)]])(calculateMemo(state));
   for (const [onPage, expected] of checks) {
-    if (onPage && onPage !== expected) throw new Error(`Total mismatch: page ${onPage} vs server ${expected}`);
+    // The invoice always prints a grand total, so an empty one means the page script never ran.
+    if ((onPage || type === "INVOICE") && onPage !== expected) throw new Error(`Total mismatch: page ${onPage || "(empty)"} vs server ${expected}`);
   }
 };
 

@@ -170,7 +170,8 @@ select:focus-visible {
   gap: 8px;
 }
 
-.button.doc-switch {
+.button.doc-switch,
+.button.lang-switch {
   display: inline-grid;
   place-items: center;
   border-color: #cbd9d4;
@@ -1291,5 +1292,71 @@ select:hover {
 
   .invoice-shell>*:last-child {
     margin-bottom: 0;
+  }
+}
+/* Language switch. body.lang-mr is copied into the share PNG by share.js, so these rules reach it too. */
+.lang-switch:disabled,
+.button.share:disabled,
+#previewPrint:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* GST Rules 46/48 markers: Marathi mode keeps the English words under the Marathi ones. */
+.legal-en {
+  display: none;
+}
+
+.lang-mr .invoice-title .legal-en {
+  display: block;
+  margin-top: 2px;
+  letter-spacing: .06em;
+}
+
+.lang-mr .invoice-title strong .legal-en {
+  font-size: 9px;
+}
+
+.lang-mr .invoice-title small .legal-en {
+  font-size: 7.5px;
+}
+
+/* Letter-spacing breaks the Devanagari headline stroke; Arial and Inter carry no Devanagari glyphs. */
+.lang-mr .brand-mini strong,
+.lang-mr .editor-intro .eyebrow,
+.lang-mr .editor-intro h1,
+.lang-mr label,
+.lang-mr .seller-heading h2,
+.lang-mr .invoice-title small {
+  letter-spacing: 0;
+}
+
+.lang-mr .editor-intro h1 {
+  line-height: 1.35;
+}
+
+.lang-mr .invoice-shell {
+  font-family: Arial, "Nirmala UI", "Noto Sans Devanagari", Mangal, sans-serif;
+}
+
+@media (max-width: 960px) {
+  /* Same matra room as memo.css: Chrome on OxygenOS clips Devanagari vowel signs at tight line heights. */
+  .lang-mr .editor-panel label,
+  .lang-mr .editor-panel input,
+  .lang-mr .editor-panel textarea {
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans Devanagari", "Segoe UI", sans-serif;
+    line-height: 1.38;
+  }
+}
+
+@media (max-width: 420px) {
+  /* Four header controls on a 360px phone: the mic keeps its icon; its label stays for screen readers. */
+  .voice-btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }

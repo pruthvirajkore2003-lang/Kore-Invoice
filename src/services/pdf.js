@@ -15,13 +15,15 @@ const ASSETS = {
   "/memo.js": "text/javascript; charset=utf-8",
   "/share.js": "text/javascript; charset=utf-8",
   "/voice.js": "text/javascript; charset=utf-8",
+  "/i18n.js": "text/javascript; charset=utf-8",
   "/signature.png": "image/png",
   "/invoice-paper.png": "image/png",
 };
 // The page scripts read their draft from these keys, so the browser's own invoice.js/memo.js does the math.
+// Without a langKey entry each page renders in its own default (invoice English, memo Marathi).
 const TEMPLATES = {
-  INVOICE: { page: "/invoice.html", storageKey: "stk-invoice-draft-v1", shell: "#invoice" },
-  MEMO: { page: "/memo.html", storageKey: "stk-digital-memo-v1", shell: "#memo" },
+  INVOICE: { page: "/invoice.html", storageKey: "stk-invoice-draft-v1", langKey: "stk-invoice-lang-v1", shell: "#invoice" },
+  MEMO: { page: "/memo.html", storageKey: "stk-digital-memo-v1", langKey: "stk-memo-lang-v1", shell: "#memo" },
 };
 
 let browserPromise;
@@ -41,13 +43,16 @@ const getBrowser = async () => {
 export const closeBrowser = async () => (await browserPromise)?.close();
 
 // Returns the PDF plus the totals the page itself displayed, so callers can cross-check the server math.
-export const renderPdf = async (type, state) => {
+// lang ("en" | "mr") is optional; the bot leaves it out.
+export const renderPdf = async (type, state, lang) => {
   const template = TEMPLATES[type];
   if (!template) throw new Error(`Unknown document type ${type}`);
   const page = await (await getBrowser()).newPage();
+  const pageErrors = [];
   try {
     await page.setViewport({ width: 1280, height: 1800 });
     await page.setRequestInterception(true);
+    page.on("pageerror", (error) => pageErrors.push(error));
     page.on("request", async (request) => {
       const url = new URL(request.url());
       const type = url.origin === ORIGIN && ASSETS[url.pathname];
@@ -55,14 +60,24 @@ export const renderPdf = async (type, state) => {
       if (!type) return request.abort();
       request.respond({ status: 200, contentType: type, body: await readFile(resolve(publicDir, `.${url.pathname}`)) });
     });
-    await page.evaluateOnNewDocument((key, json) => localStorage.setItem(key, json), template.storageKey, JSON.stringify(state));
+    // The shared browser keeps localStorage between renders, so a missing lang must clear any earlier one.
+    await page.evaluateOnNewDocument((key, json, langKey, langValue) => {
+      localStorage.setItem(key, json);
+      if (langValue) localStorage.setItem(langKey, langValue);
+      else localStorage.removeItem(langKey);
+    }, template.storageKey, JSON.stringify(state), template.langKey, lang || "");
     await page.goto(`${ORIGIN}${template.page}`, { waitUntil: "load", timeout: 30000 });
     await page.evaluate(() => document.fonts.ready);
+    // A page script that died before render() leaves a signed but empty document: never send that.
+    if (pageErrors.length) throw new Error(`Page script failed: ${pageErrors[0].message}`);
+    await page.emulateMediaType("print");
 
     const shown = await page.$eval(template.shell, (shell) => {
       const text = (selector) => shell.querySelector(selector)?.textContent.trim() ?? "";
       const signature = shell.querySelector('img[src="/signature.png"]');
       return {
+        // Print clips at one A4 page; anything taller than the sheet would be cut off silently.
+        overflows: shell.scrollHeight > shell.clientHeight + 1,
         sellerText: shell.textContent.replace(/\s+/g, " "),
         signatureLoaded: Boolean(signature?.complete && signature.naturalWidth > 0),
         logoSvg: Boolean(shell.querySelector(".agri-logo svg")),

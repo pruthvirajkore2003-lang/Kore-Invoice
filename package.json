@@ -9,7 +9,7 @@
   "scripts": {
     "build": "node scripts/build-static.mjs",
     "build:offline": "node scripts/build-offline.mjs",
-    "test": "npm run build && node --check public/invoice.js && node --check public/memo.js && node --check public/share.js && node --check public/voice.js && node --test",
+    "test": "npm run build && node --check public/i18n.js && node --check public/invoice.js && node --check public/memo.js && node --check public/share.js && node --check public/voice.js && node --test",
     "start": "node src/server.js",
     "dev": "node --env-file=.env src/server.js"
   },

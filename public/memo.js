@@ -1,6 +1,7 @@
 (() => {
   "use strict";
 
+  const { t } = window.STKI18n;
   const STORAGE_KEY = "stk-digital-memo-v1";
   const MAX_ITEMS = 5;
   const blankItem = () => ({
@@ -132,8 +133,6 @@
     return { rows, total, advance, balance };
   };
 
-  const basisLabels = { bag: "प्रति पोते", quintal: "प्रति क्विंटल", manual: "स्वतः भरलेले" };
-
   const itemHasData = (item) => Boolean(item.goodsDetails || item.weightKg || item.bags || item.freightRate || item.manualTotal || item.advancePaid || item.rateBasis !== "bag");
 
   const addTextElement = (parent, tag, className, value) => {
@@ -160,13 +159,13 @@
       const goodsCell = document.createElement("td");
       goodsCell.className = "goods-value";
       addTextElement(goodsCell, "strong", "", item.goodsDetails);
-      addTextElement(goodsCell, "span", "", item.weightKg ? `वजन: ${item.weightKg} किलो` : "");
+      addTextElement(goodsCell, "span", "", item.weightKg ? t("memo.doc.weight", { kg: item.weightKg }) : "");
       if (index === 0) addTextElement(goodsCell, "small", "", state.specialNote);
       row.appendChild(goodsCell);
 
       addTextElement(row, "td", "", item.bags);
       const rateCell = addTextElement(row, "td", "rate-value", item.rateBasis === "manual" && hasItemData ? "-" : (item.freightRate ? formatMoney(numeric(item.freightRate)) : ""));
-      addTextElement(rateCell, "small", "", hasItemData ? basisLabels[item.rateBasis] : "");
+      addTextElement(rateCell, "small", "", hasItemData ? t(`memo.basis.${item.rateBasis}`) : "");
       addTextElement(row, "td", "", hasItemData ? formatMoney(rowTotals.total) : "");
       addTextElement(row, "td", "settlement-cell", rowTotals.advance ? formatMoney(rowTotals.advance) : "");
       addTextElement(row, "td", "settlement-cell row-balance-value", hasItemData ? formatMoney(rowTotals.balance) : "");
@@ -182,15 +181,20 @@
       const index = Number.parseInt(card.dataset.itemIndex, 10);
       const item = state.items[index];
       if (!item) return;
+      card.querySelector("[data-item-title]").textContent = t("memo.item.title", { n: index + 1 });
+      card.querySelector("[data-remove-item]").setAttribute("aria-label", t("memo.item.removeAria", { n: index + 1 }));
       card.querySelector(".manual-total-item").hidden = item.rateBasis !== "manual";
       card.querySelector("[data-item-total]").textContent = formatMoney(totals.rows[index].total);
       card.querySelector("[data-item-balance]").textContent = formatMoney(totals.rows[index].balance);
     });
+    const addButton = document.getElementById("addMemoItem");
+    addButton.textContent = t(addButton.disabled ? "memo.maxItems" : "memo.addItem");
     document.getElementById("formTotalFreight").textContent = formatMoney(totals.total);
     document.getElementById("formAdvance").textContent = formatMoney(totals.advance);
     document.getElementById("formBalance").textContent = formatMoney(totals.balance);
   };
 
+  // Markup only; every word comes from STKI18n through data-i18n, so a switch relabels cards in place.
   const renderItemEditors = () => {
     const container = document.getElementById("memoItemEditors");
     container.replaceChildren();
@@ -200,28 +204,29 @@
       card.dataset.itemIndex = String(index);
       card.innerHTML = `
         <div class="memo-item-card-head">
-          <strong>माल ${index + 1}</strong>
-          <button class="memo-remove-item" type="button" data-remove-item aria-label="माल ${index + 1} काढा">काढा</button>
+          <strong data-item-title></strong>
+          <button class="memo-remove-item" type="button" data-remove-item data-i18n="memo.item.remove"></button>
         </div>
-        <label>मालाचा तपशील<textarea rows="2" name="itemGoodsDetails-${index}" data-item-field="goodsDetails"></textarea></label>
+        <label data-i18n="memo.item.goods"><textarea rows="2" name="itemGoodsDetails-${index}" data-item-field="goodsDetails"></textarea></label>
         <div class="form-grid two">
-          <label>वजन (किलो)<input type="number" min="0" step="0.01" inputmode="decimal" name="itemWeight-${index}" data-item-field="weightKg" /></label>
-          <label>पोती नग<input type="number" min="0" step="1" inputmode="numeric" name="itemBags-${index}" data-item-field="bags" /></label>
-          <label>भाडे दर<input type="number" min="0" step="0.01" inputmode="decimal" name="itemRate-${index}" data-item-field="freightRate" /></label>
-          <label>दर पद्धत
+          <label data-i18n="memo.item.weight"><input type="number" min="0" step="0.01" inputmode="decimal" name="itemWeight-${index}" data-item-field="weightKg" /></label>
+          <label data-i18n="memo.item.bags"><input type="number" min="0" step="1" inputmode="numeric" name="itemBags-${index}" data-item-field="bags" /></label>
+          <label data-i18n="memo.item.rate"><input type="number" min="0" step="0.01" inputmode="decimal" name="itemRate-${index}" data-item-field="freightRate" /></label>
+          <label data-i18n="memo.item.basis">
             <select name="itemBasis-${index}" data-item-field="rateBasis">
-              <option value="bag">प्रति पोते</option>
-              <option value="quintal">प्रति क्विंटल</option>
-              <option value="manual">एकूण भाडे स्वतः भरा</option>
+              <option value="bag" data-i18n="memo.option.bag"></option>
+              <option value="quintal" data-i18n="memo.option.quintal"></option>
+              <option value="manual" data-i18n="memo.option.manual"></option>
             </select>
           </label>
-          <label class="manual-total-item" hidden>एकूण भाडे<input type="number" min="0" step="0.01" inputmode="decimal" name="itemManualTotal-${index}" data-item-field="manualTotal" /></label>
-          <label>उचल दिली रुपये<input type="number" min="0" step="0.01" inputmode="decimal" name="itemAdvance-${index}" data-item-field="advancePaid" /></label>
+          <label class="manual-total-item" hidden data-i18n="memo.item.manualTotal"><input type="number" min="0" step="0.01" inputmode="decimal" name="itemManualTotal-${index}" data-item-field="manualTotal" /></label>
+          <label data-i18n="memo.item.advance"><input type="number" min="0" step="0.01" inputmode="decimal" name="itemAdvance-${index}" data-item-field="advancePaid" /></label>
         </div>
         <div class="memo-item-calculated">
-          <div><span>या मालाचे भाडे</span><output data-item-total>0.00</output></div>
-          <div><span>बाकी भाडे</span><output data-item-balance>0.00</output></div>
+          <div><span data-i18n="memo.item.freight"></span><output data-item-total>0.00</output></div>
+          <div><span data-i18n="memo.item.balance"></span><output data-item-balance>0.00</output></div>
         </div>`;
+      window.STKI18n.apply(card);
       card.querySelectorAll("[data-item-field]").forEach((field) => {
         field.value = item[field.dataset.itemField] ?? "";
       });
@@ -229,9 +234,7 @@
       container.appendChild(card);
     });
 
-    const addButton = document.getElementById("addMemoItem");
-    addButton.disabled = state.items.length >= MAX_ITEMS;
-    addButton.textContent = addButton.disabled ? "कमाल ५ माल" : "+ माल जोडा";
+    document.getElementById("addMemoItem").disabled = state.items.length >= MAX_ITEMS;
   };
 
   const render = () => {
@@ -276,52 +279,58 @@
   };
 
   let toastTimer;
-  const showToast = (message) => {
+  // sticky keeps a message up until the next one (e.g. while text converts); null just clears it.
+  const showToast = (message, sticky = false) => {
     const toast = document.getElementById("toast");
+    clearTimeout(toastTimer);
+    if (message === null) return toast.classList.remove("show");
     toast.textContent = message;
     toast.classList.add("show");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove("show"), 2500);
+    if (!sticky) toastTimer = setTimeout(() => toast.classList.remove("show"), 2500);
   };
 
   const printMemo = () => {
     setView("preview");
     document.title = state.memoNumber ? `STK-Memo-${state.memoNumber}` : "STK-Memo";
-    showToast("Print मध्ये Save as PDF निवडा");
+    showToast(t("common.toast.print"));
     setTimeout(() => window.print(), 280);
   };
 
   // WhatsApp markdown: *bold*, plain bullets. Empty fields drop out entirely.
-  const memoSummary = () => {
+  // Self-contained on purpose: test/parity.test.js runs this block alone, so its words live here.
+  const memoSummary = (lang = "mr") => {
+    const words = lang === "en"
+      ? { title: "*STK Digital Freight Memo*", number: "Memo no.", date: "Date", party: "To", destination: "Destination", vehicle: "Vehicle no.", driver: "Driver", items: "*Goods*", goods: "Goods", bags: "bags", kg: "kg", currency: "Rs.", total: "Total freight", advance: "Advance paid", balance: "Balance freight", note: "Note", seller: "Suresh Tukaram Kore, Malshiras - 7057100034" }
+      : { title: "*STK डिजिटल माल पावती*", number: "पावती नं.", date: "तारीख", party: "श्री", destination: "मुक्काम", vehicle: "मोटार नं.", driver: "ड्रायव्हर", items: "*माल तपशील*", goods: "माल", bags: "नग", kg: "किलो", currency: "रु.", total: "एकूण भाडे", advance: "उचल दिली", balance: "बाकी भाडे", note: "सूचना", seller: "सुरेश तुकाराम कोरे, माळशिरस - 7057100034" };
     const totals = calculate();
     const itemLines = state.items
       .map((item, index) => ({ item, row: totals.rows[index] || { total: 0 } }))
       .filter(({ item }) => itemHasData(item))
       .map(({ item, row }) => {
-        const detail = [item.bags ? `${item.bags} नग` : "", item.weightKg ? `${item.weightKg} किलो` : ""].filter(Boolean).join(" / ");
-        return `  - ${item.goodsDetails || "माल"}${detail ? ` (${detail})` : ""} = रु. ${formatMoney(row.total)}`;
+        const detail = [item.bags ? `${item.bags} ${words.bags}` : "", item.weightKg ? `${item.weightKg} ${words.kg}` : ""].filter(Boolean).join(" / ");
+        return `  - ${item.goodsDetails || words.goods}${detail ? ` (${detail})` : ""} = ${words.currency} ${formatMoney(row.total)}`;
       });
     return [
-      "*STK डिजिटल माल पावती*",
-      state.memoNumber ? `पावती नं.: *${state.memoNumber}*` : "",
-      state.memoDate ? `तारीख: ${formatDate(state.memoDate)}` : "",
-      state.partyName ? `श्री: ${state.partyName}` : "",
-      state.destination ? `मुक्काम: ${state.destination}` : "",
-      state.vehicleNumber ? `मोटार नं.: ${state.vehicleNumber}` : "",
-      state.driverName ? `ड्रायव्हर: ${state.driverName}` : "",
-      itemLines.length ? "*माल तपशील*" : "",
+      words.title,
+      state.memoNumber ? `${words.number}: *${state.memoNumber}*` : "",
+      state.memoDate ? `${words.date}: ${formatDate(state.memoDate)}` : "",
+      state.partyName ? `${words.party}: ${state.partyName}` : "",
+      state.destination ? `${words.destination}: ${state.destination}` : "",
+      state.vehicleNumber ? `${words.vehicle}: ${state.vehicleNumber}` : "",
+      state.driverName ? `${words.driver}: ${state.driverName}` : "",
+      itemLines.length ? words.items : "",
       ...itemLines,
-      `एकूण भाडे: *रु. ${formatMoney(totals.total)}*`,
-      totals.advance ? `उचल दिली: रु. ${formatMoney(totals.advance)}` : "",
-      `बाकी भाडे: *रु. ${formatMoney(totals.balance)}*`,
-      state.specialNote ? `सूचना: ${state.specialNote}` : "",
+      `${words.total}: *${words.currency} ${formatMoney(totals.total)}*`,
+      totals.advance ? `${words.advance}: ${words.currency} ${formatMoney(totals.advance)}` : "",
+      `${words.balance}: *${words.currency} ${formatMoney(totals.balance)}*`,
+      state.specialNote ? `${words.note}: ${state.specialNote}` : "",
       "",
-      "सुरेश तुकाराम कोरे, माळशिरस - 7057100034",
+      words.seller,
     ].filter(Boolean).join("\n");
   };
 
   const shareMemoBill = async (button) => {
-    const text = memoSummary();
+    const text = memoSummary(window.STKI18n.getLang());
     if (!window.STKShare) {
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank", "noopener");
       return;
@@ -329,7 +338,7 @@
     setView("preview");
     document.title = state.memoNumber ? `STK-Memo-${state.memoNumber}` : "STK-Memo";
     button.setAttribute("aria-busy", "true");
-    showToast("पावती पाठवण्यासाठी तयार होत आहे");
+    showToast(t("memo.toast.preparing"));
     // Let the preview finish laying out, otherwise the snapshot measures zero.
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     try {
@@ -340,34 +349,39 @@
         text,
         onFallbackPrint: () => setTimeout(() => window.print(), 500),
       });
-      if (result === "shared-file") showToast("शेअर करा - WhatsApp निवडा");
-      else if (result === "shared-text") showToast("पावती तपशील मजकूर म्हणून पाठवला");
-      else if (result === "whatsapp-link") showToast("WhatsApp उघडले, PDF स्क्रीन येईल");
+      if (result === "shared-file") showToast(t("common.toast.sharedFile"));
+      else if (result === "shared-text") showToast(t("memo.toast.sharedText"));
+      else if (result === "whatsapp-link") showToast(t("common.toast.whatsapp"));
     } catch {
-      showToast("शेअर शक्य नाही - PDF तयार करा");
+      showToast(t("common.toast.shareFailed"));
     } finally {
       button.removeAttribute("aria-busy");
     }
   };
 
   const resetMemo = () => {
-    if (!window.confirm("सध्याची पावती साफ करून नवीन पावती सुरू करायची?")) return;
+    if (!window.confirm(t("memo.confirm.new"))) return;
+    window.STKI18n.reset();
     state = blankState();
     try { localStorage.removeItem(STORAGE_KEY); } catch { /* Ignore blocked device storage. */ }
     applyState();
     render();
     setView("editor");
-    showToast("नवीन कोरी पावती तयार");
+    showToast(t("memo.toast.newReady"));
   };
 
   // Voice data is untrusted model output: whitelist keys, coerce types, only fill what was spoken.
   const VOICE_NUMBER_FIELDS = ["weightKg", "bags", "freightRate", "manualTotal", "advancePaid"];
+  // Returns the field ids it wrote, so only those follow the page language afterwards.
   const applyVoiceData = (data) => {
+    const written = new Set();
     Object.keys(blankState()).forEach((key) => {
       const raw = data[key];
       if (key === "items" || (typeof raw !== "string" && typeof raw !== "number")) return;
       const value = String(raw).trim().slice(0, 500);
-      if (value) state[key] = key === "memoDate" ? formatDate(value) : value;
+      if (!value) return;
+      state[key] = key === "memoDate" ? formatDate(value) : value;
+      written.add(key);
     });
     // Spoken items replace empty cards first, then append up to MAX_ITEMS; filled cards stay untouched.
     (Array.isArray(data.items) ? data.items : []).forEach((spoken) => {
@@ -375,16 +389,49 @@
       VOICE_NUMBER_FIELDS.forEach((key) => { item[key] = numeric(item[key]) ? String(numeric(item[key])) : ""; });
       if (!itemHasData(item)) return;
       const empty = state.items.findIndex((existing) => !itemHasData(existing));
-      if (empty >= 0) state.items[empty] = item;
-      else if (state.items.length < MAX_ITEMS) state.items.push(item);
+      const slot = empty >= 0 ? empty : state.items.length < MAX_ITEMS ? state.items.length : -1;
+      if (slot < 0) return;
+      state.items[slot] = item;
+      written.add(`items.${slot}.goodsDetails`);
     });
     applyState();
     render();
+    return written;
   };
 
+  // Writes state into the existing inputs without rebuilding item cards, so focus and typing survive.
+  // Only differing values are written: rewriting "60." (read back as "60") would eat the decimal point.
+  const syncFormValues = () => {
+    const write = (field, value) => { if (field.value !== value) field.value = value; };
+    document.querySelectorAll("[data-field]").forEach((field) => write(field, state[field.name] ?? ""));
+    document.querySelectorAll(".memo-item-card").forEach((card) => {
+      const item = state.items[Number.parseInt(card.dataset.itemIndex, 10)];
+      if (!item) return;
+      card.querySelectorAll("[data-item-field]").forEach((field) => write(field, item[field.dataset.itemField] ?? ""));
+    });
+  };
+
+  // Typed text that follows the language switch (api/translate.js keeps the same list). Codes, numbers
+  // and dates never change; agentSignature prints as the agent's signature, so it stays as written.
+  // `only`: limit to these field ids (voice fill, retry).
+  const CONVERTIBLE = ["partyName", "destination", "village", "fullAddress", "ownerName", "driverName", "specialNote"];
+  const CONVERTIBLE_ITEM = ["goodsDetails"];
+  const convertTypedText = async (only) => {
+    if (!(await window.STKI18n.convertDraft(() => state, CONVERTIBLE, CONVERTIBLE_ITEM, showToast, only))) return;
+    syncFormValues();
+    render();
+  };
+  // Details left unconverted (offline, failed, or the page closed meanwhile) catch up; nothing else is touched.
+  const retryMissed = () => {
+    const missed = window.STKI18n.missedIds();
+    if (missed.size) convertTypedText(missed);
+  };
+
+  window.STKI18n.init("memo", "mr");
   applyState();
   render();
   fitPreview();
+  retryMissed();
 
   const syncDateFromPicker = (native) => {
     const field = native.closest(".date-input-wrap")?.querySelector("[data-date-field]");
@@ -471,12 +518,21 @@
   window.STKVoice?.initVoiceButton(document.getElementById("voiceFillBtn"), {
     docType: "memo",
     toast: showToast,
-    onResult: ({ transcript, data }) => {
-      applyVoiceData(data);
+    onResult: async ({ transcript, data }) => {
+      const written = applyVoiceData(data);
       setView("preview");
-      showToast(`आवाजातून माहिती भरली: "${transcript.length > 70 ? `${transcript.slice(0, 70)}...` : transcript}"`);
+      // Spoken names arrive in the script they were said in; bring just those into the page language.
+      await convertTypedText(written);
+      showToast(t("common.toast.voiceFilled", { text: transcript.length > 70 ? `${transcript.slice(0, 70)}...` : transcript }));
     },
   });
+  document.getElementById("langSwitch").addEventListener("click", () => {
+    window.STKI18n.toggle();
+    render();
+    fitPreview();
+    convertTypedText();
+  });
+  window.addEventListener("online", retryMissed);
   window.addEventListener("resize", fitPreview, { passive: true });
   window.visualViewport?.addEventListener("resize", fitPreview, { passive: true });
 

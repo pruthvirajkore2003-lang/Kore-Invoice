@@ -170,7 +170,8 @@ select:focus-visible {
   gap: 8px;
 }
 
-.button.doc-switch {
+.button.doc-switch,
+.button.lang-switch {
   display: inline-grid;
   place-items: center;
   border-color: #cbd9d4;
@@ -1538,7 +1539,8 @@ select:hover {
   font-weight: 750;
 }
 
-.transport-lines span {
+/* Only the value slots are fill-in blanks; the letter text between them is plain (it is translated). */
+.transport-lines [data-out] {
   min-width: 130px;
   min-height: 25px;
   display: inline-flex;
@@ -2107,5 +2109,24 @@ select:hover {
 
   .owner-sign img {
     mix-blend-mode: normal;
+  }
+}
+/* Language switch. body.lang-* is copied into the share PNG by share.js, so these rules reach it too. */
+.lang-switch:disabled,
+.button.share:disabled,
+#previewPrint:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+@media (max-width: 420px) {
+  /* Four header controls on a 360px phone: the mic keeps its icon; its label stays for screen readers. */
+  .voice-btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }

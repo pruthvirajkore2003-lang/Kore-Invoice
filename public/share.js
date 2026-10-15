@@ -66,6 +66,8 @@
 
     const wrapper = document.createElement("div");
     wrapper.className = document.body.className;
+    // <html lang> is outside the clone; without it the image loses Marathi glyph forms and :lang() rules.
+    wrapper.setAttribute("lang", document.documentElement.lang);
     wrapper.appendChild(style);
     wrapper.appendChild(clone);
 

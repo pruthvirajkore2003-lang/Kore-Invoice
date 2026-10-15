@@ -1,32 +1,23 @@
 (() => {
   "use strict";
 
+  const { t } = window.STKI18n;
   const STORAGE_KEY = "stk-invoice-draft-v1";
   const ITEM_COUNT = 6;
   const itemFields = ["particulars", "hsn", "bags", "uom", "quantity", "rate"];
-  const GRAINS = [
-    ["Maize (Makka)", "1005"],
-    ["Chickpeas (Chana)", "0713"],
-    ["Wheat", "1001"],
-    ["Rice", "1006"],
-    ["Jowar (Sorghum)", "1007"],
-    ["Bajra (Pearl Millet)", "1008"],
-    ["Barley", "1003"],
-    ["Ragi (Finger Millet)", "1008"],
-    ["Soybean", "1201"],
-    ["Tur / Arhar (Pigeon Pea)", "0713"],
-    ["Moong (Green Gram)", "0713"],
-    ["Urad (Black Gram)", "0713"],
-    ["Groundnut", "1202"],
-    ["Sunflower Seeds", "1206"],
-  ];
+  // [english, marathi, HSN]. Option values stay English; particulars stores the name in the current language.
+  const GRAINS = window.STKI18n.grains;
   const OTHER_GRAIN = "Other (type manually)";
+  const findGrain = (value) => GRAINS.find(([english, marathi]) => value === english || value === marathi);
+  const grainName = (grain) => grain[window.STKI18n.getLang() === "mr" ? 1 : 0];
 
   const syncGrainPicker = (select, value) => {
     const custom = select.parentElement.querySelector('[data-grain-picker="custom"]');
-    const known = GRAINS.some(([name]) => name === value);
-    select.value = known ? value : value ? OTHER_GRAIN : "";
-    custom.value = known ? "" : value || "";
+    const grain = findGrain(value);
+    // Already showing it (including "Other" picked with the name not typed yet): leave the picker alone.
+    if (grain ? select.value === grain[0] : select.value === OTHER_GRAIN && custom.value === (value || "")) return;
+    select.value = grain ? grain[0] : value ? OTHER_GRAIN : "";
+    custom.value = grain ? "" : value || "";
     custom.hidden = select.value !== OTHER_GRAIN;
   };
   const blankItem = () => ({ particulars: "", hsn: "", bags: "", uom: "", quantity: "", rate: "" });
@@ -163,34 +154,81 @@
     return parts.join(" ").replace(/\s+/g, " ").trim();
   };
 
-  const amountInWords = (amount) => {
+  // Marathi has its own word for every number below 100; tens and units never combine.
+  const marathiNumbers = [
+    "", "एक", "दोन", "तीन", "चार", "पाच", "सहा", "सात", "आठ", "नऊ",
+    "दहा", "अकरा", "बारा", "तेरा", "चौदा", "पंधरा", "सोळा", "सतरा", "अठरा", "एकोणीस",
+    "वीस", "एकवीस", "बावीस", "तेवीस", "चोवीस", "पंचवीस", "सव्वीस", "सत्तावीस", "अठ्ठावीस", "एकोणतीस",
+    "तीस", "एकतीस", "बत्तीस", "तेहेतीस", "चौतीस", "पस्तीस", "छत्तीस", "सदतीस", "अडतीस", "एकोणचाळीस",
+    "चाळीस", "एक्केचाळीस", "बेचाळीस", "त्रेचाळीस", "चव्वेचाळीस", "पंचेचाळीस", "सेहेचाळीस", "सत्तेचाळीस", "अठ्ठेचाळीस", "एकोणपन्नास",
+    "पन्नास", "एक्कावन्न", "बावन्न", "त्रेपन्न", "चोपन्न", "पंचावन्न", "छप्पन्न", "सत्तावन्न", "अठ्ठावन्न", "एकोणसाठ",
+    "साठ", "एकसष्ट", "बासष्ट", "त्रेसष्ट", "चौसष्ट", "पासष्ट", "सहासष्ट", "सदुसष्ट", "अडुसष्ट", "एकोणसत्तर",
+    "सत्तर", "एक्काहत्तर", "बाहत्तर", "त्र्याहत्तर", "चौऱ्याहत्तर", "पंच्याहत्तर", "शहात्तर", "सत्त्याहत्तर", "अठ्ठ्याहत्तर", "एकोणऐंशी",
+    "ऐंशी", "एक्क्याऐंशी", "ब्याऐंशी", "त्र्याऐंशी", "चौऱ्याऐंशी", "पंच्याऐंशी", "शहाऐंशी", "सत्त्याऐंशी", "अठ्ठ्याऐंशी", "एकोणनव्वद",
+    "नव्वद", "एक्क्याण्णव", "ब्याण्णव", "त्र्याण्णव", "चौऱ्याण्णव", "पंच्याण्णव", "शहाण्णव", "सत्त्याण्णव", "अठ्ठ्याण्णव", "नव्याण्णव",
+  ];
+
+  // Hundreds join the number: दोनशे, नऊशे; exactly 100 is शंभर, 101-199 start with एकशे.
+  const marathiUnderThousand = (number) => {
+    const hundreds = Math.floor(number / 100);
+    const rest = number % 100;
+    const head = !hundreds ? "" : hundreds === 1 ? (rest ? "एकशे" : "शंभर") : `${marathiNumbers[hundreds]}शे`;
+    return [head, marathiNumbers[rest]].filter(Boolean).join(" ");
+  };
+
+  const integerToMarathiWords = (number) => {
+    number = Math.max(0, Math.floor(number));
+    if (number === 0) return "शून्य";
+    const parts = [];
+    for (const [size, label] of [[10000000, "कोटी"], [100000, "लाख"], [1000, "हजार"]]) {
+      if (number >= size) {
+        parts.push(`${integerToMarathiWords(Math.floor(number / size))} ${label}`);
+        number %= size;
+      }
+    }
+    if (number > 0) parts.push(marathiUnderThousand(number));
+    return parts.join(" ");
+  };
+
+  const amountInWords = (amount, lang = "en") => {
     const totalPaise = Math.round(Math.max(0, amount) * 100);
     const rupees = Math.floor(totalPaise / 100);
     const paise = totalPaise % 100;
+    if (lang === "mr") {
+      const rupeeWords = `${integerToMarathiWords(rupees)} ${rupees === 1 ? "रुपया" : "रुपये"}`;
+      return paise ? `${rupeeWords} आणि ${integerToMarathiWords(paise)} ${paise === 1 ? "पैसा" : "पैसे"} फक्त` : `${rupeeWords} फक्त`;
+    }
     const rupeeWords = `${integerToIndianWords(rupees)} Rupees`;
     return paise ? `${rupeeWords} and ${integerToIndianWords(paise)} Paise Only` : `${rupeeWords} Only`;
   };
 
   const createGrainPicker = (index) => {
+    // Option text carries data-i18n so a language switch relabels it in place.
+    const translatedOption = (key, value) => {
+      const option = new Option(t(key), value);
+      option.dataset.i18n = key;
+      return option;
+    };
     const fragment = document.createDocumentFragment();
     const select = document.createElement("select");
     select.dataset.itemIndex = String(index);
     select.dataset.itemField = "particulars";
     select.dataset.grainPicker = "select";
-    select.append(new Option("Select grain", ""));
-    GRAINS.forEach(([name]) => select.append(new Option(name, name)));
-    select.append(new Option(OTHER_GRAIN, OTHER_GRAIN));
+    select.append(translatedOption("inv.grain.select", ""));
+    GRAINS.forEach(([english], grainIndex) => select.append(translatedOption(`grain.${grainIndex}`, english)));
+    select.append(translatedOption("inv.grain.other", OTHER_GRAIN));
     const custom = document.createElement("input");
     custom.type = "text";
-    custom.placeholder = "Type item name";
+    custom.placeholder = t("inv.grain.custom");
+    custom.dataset.i18nPlaceholder = "inv.grain.custom";
     custom.dataset.itemIndex = String(index);
     custom.dataset.itemField = "particulars";
     custom.dataset.grainPicker = "custom";
     fragment.append(select, custom);
     const value = state.items[index].particulars;
-    const known = GRAINS.some(([name]) => name === value);
-    select.value = known ? value : value ? OTHER_GRAIN : "";
-    custom.value = known ? "" : value || "";
+    const grain = findGrain(value);
+    select.value = grain ? grain[0] : value ? OTHER_GRAIN : "";
+    custom.value = grain ? "" : value || "";
     custom.hidden = select.value !== OTHER_GRAIN;
     return fragment;
   };
@@ -206,7 +244,7 @@
       const summary = document.createElement("summary");
       const name = document.createElement("span");
       name.className = "item-name";
-      name.textContent = item.particulars || `Item ${index + 1}`;
+      name.textContent = item.particulars || t("inv.item.n", { n: index + 1 });
       const amount = document.createElement("strong");
       amount.className = "item-amount";
       summary.append(name, amount);
@@ -214,18 +252,19 @@
       const fields = document.createElement("div");
       fields.className = "item-fields";
       const definitions = [
-        ["particulars", "Particulars", "text", "wide-field"],
-        ["hsn", "HSN code", "text", ""],
-        ["bags", "Bags", "number", ""],
-        ["uom", "UOM", "text", ""],
-        ["quantity", "Quantity", "number", ""],
-        ["rate", "Rate (INR)", "number", ""],
+        ["particulars", "inv.item.particulars", "text", "wide-field"],
+        ["hsn", "inv.item.hsn", "text", ""],
+        ["bags", "inv.item.bags", "number", ""],
+        ["uom", "inv.item.uom", "text", ""],
+        ["quantity", "inv.item.quantity", "number", ""],
+        ["rate", "inv.item.rate", "number", ""],
       ];
 
-      definitions.forEach(([field, labelText, type, className]) => {
+      definitions.forEach(([field, labelKey, type, className]) => {
         const label = document.createElement("label");
         if (className) label.className = className;
-        label.append(document.createTextNode(labelText));
+        label.dataset.i18n = labelKey;
+        label.append(document.createTextNode(t(labelKey)));
         if (field === "particulars") {
           label.append(createGrainPicker(index));
         } else {
@@ -283,7 +322,10 @@
   const render = () => {
     document.querySelectorAll("[data-out]").forEach((element) => {
       const key = element.dataset.out;
-      const value = key.endsWith("Date") ? formatDate(state[key]) : state[key];
+      let value = state[key];
+      if (key.endsWith("Date")) value = formatDate(value);
+      // Stored statuses stay English (voice fill and the bot rely on them); only the printed label changes.
+      else if (key === "paymentStatus" && PAYMENT_STATUSES.includes(value)) value = t(`inv.payDoc.${value}`);
       element.textContent = value || "";
     });
 
@@ -304,8 +346,8 @@
       });
       const editor = document.querySelectorAll(".item-editor")[index];
       if (editor) {
-        editor.querySelector(".item-name").textContent = item.particulars || `Item ${index + 1}`;
-        editor.querySelector(".item-amount").textContent = totals.supplies[index] ? `INR ${formatMoney(totals.supplies[index])}` : "";
+        editor.querySelector(".item-name").textContent = item.particulars || t("inv.item.n", { n: index + 1 });
+        editor.querySelector(".item-amount").textContent = totals.supplies[index] ? t("inv.item.amount", { amount: formatMoney(totals.supplies[index]) }) : "";
       }
     });
 
@@ -317,19 +359,22 @@
     text("#cgstAmount", totals.cgst ? formatMoney(totals.cgst) : "");
     text("#freightAmount", totals.freight ? formatMoney(totals.freight) : "");
     text("#grandTotal", formatMoney(totals.grandTotal));
-    text("#amountWords", amountInWords(totals.grandTotal));
+    text("#amountWords", amountInWords(totals.grandTotal, window.STKI18n.getLang()));
     saveState();
   };
 
+  // Writes only values that differ: rewriting a field mid-typing ("63." reads back as "63") would eat the
+  // decimal point and jump the caret when a late conversion lands.
   const applyStateToForm = () => {
     document.querySelectorAll("[data-field]").forEach((field) => {
-      field.value = state[field.name] ?? "";
+      const value = state[field.name] ?? "";
+      if (field.value !== value) field.value = value;
     });
     document.querySelectorAll("[data-item-field]").forEach((field) => {
       const value = state.items[Number(field.dataset.itemIndex)][field.dataset.itemField] ?? "";
       if (field.dataset.grainPicker === "select") {
         syncGrainPicker(field, value);
-      } else if (field.dataset.grainPicker !== "custom") {
+      } else if (field.dataset.grainPicker !== "custom" && field.value !== value) {
         field.value = value;
       }
     });
@@ -363,48 +408,54 @@
   };
 
   let toastTimer;
-  const showToast = (message) => {
+  // sticky keeps a message up until the next one (e.g. while text converts); null just clears it.
+  const showToast = (message, sticky = false) => {
     const toast = document.getElementById("toast");
+    clearTimeout(toastTimer);
+    if (message === null) return toast.classList.remove("show");
     toast.textContent = message;
     toast.classList.add("show");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
+    if (!sticky) toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
   };
 
   const printInvoice = () => {
     setView("preview");
     document.title = state.invoiceNumber ? `Invoice-${state.invoiceNumber}` : "STK-Invoice";
-    showToast("Choose Save as PDF in print screen");
+    showToast(t("common.toast.print"));
     setTimeout(() => window.print(), 280);
   };
 
   // WhatsApp markdown: *bold*, plain bullets. Empty fields drop out entirely.
-  const invoiceSummary = () => {
+  // Self-contained on purpose: test/parity.test.js runs this block alone, so its words live here.
+  const invoiceSummary = (lang = "en") => {
+    const words = lang === "mr"
+      ? { title: "*STK - कर बीजक*", number: "बिल नं.", date: "तारीख", buyer: "खरेदीदार", po: "PO नं.", truck: "मोटार नं.", items: "*माल तपशील*", total: "एकूण रक्कम", currency: "रु.", payment: "पेमेंट", seller: "सुरेश तुकाराम कोरे, माळशिरस", status: { PENDING: "बाकी", PAID: "पूर्ण जमा", "PARTIALLY PAID": "अंशतः जमा" } }
+      : { title: "*STK - Tax Invoice*", number: "Invoice no", date: "Date", buyer: "Buyer", po: "PO", truck: "Truck", items: "*Items*", total: "Grand total", currency: "INR", payment: "Payment", seller: "Suresh Tukaram Kore, Malshiras", status: {} };
     const totals = calculate();
     const buyer = String(state.buyerDetails || "").split("\n")[0].trim();
     const itemLines = state.items
       .map((item, index) => ({ item, value: totals.supplies[index] }))
       .filter(({ item }) => String(item.particulars || "").trim())
-      .map(({ item, value }) => `  - ${item.particulars}${item.quantity ? ` x ${item.quantity} ${item.uom || ""}`.trimEnd() : ""} = INR ${formatMoney(value || 0)}`);
+      .map(({ item, value }) => `  - ${item.particulars}${item.quantity ? ` x ${item.quantity} ${item.uom || ""}`.trimEnd() : ""} = ${words.currency} ${formatMoney(value || 0)}`);
     return [
-      "*STK - Tax Invoice*",
-      state.invoiceNumber ? `Invoice no: *${state.invoiceNumber}*` : "",
-      state.invoiceDate ? `Date: ${formatDate(state.invoiceDate)}` : "",
-      buyer ? `Buyer: ${buyer}` : "",
-      state.poNumber ? `PO: ${state.poNumber}${state.poDate ? ` (${formatDate(state.poDate)})` : ""}` : "",
-      state.truckNumber ? `Truck: ${state.truckNumber}` : "",
-      itemLines.length ? "*Items*" : "",
+      words.title,
+      state.invoiceNumber ? `${words.number}: *${state.invoiceNumber}*` : "",
+      state.invoiceDate ? `${words.date}: ${formatDate(state.invoiceDate)}` : "",
+      buyer ? `${words.buyer}: ${buyer}` : "",
+      state.poNumber ? `${words.po}: ${state.poNumber}${state.poDate ? ` (${formatDate(state.poDate)})` : ""}` : "",
+      state.truckNumber ? `${words.truck}: ${state.truckNumber}` : "",
+      itemLines.length ? words.items : "",
       ...itemLines,
-      `Grand total: *INR ${formatMoney(totals.grandTotal)}*`,
-      amountInWords(totals.grandTotal),
-      state.paymentStatus ? `Payment: ${state.paymentStatus}` : "",
+      `${words.total}: *${words.currency} ${formatMoney(totals.grandTotal)}*`,
+      amountInWords(totals.grandTotal, lang),
+      state.paymentStatus ? `${words.payment}: ${words.status[state.paymentStatus] || state.paymentStatus}` : "",
       "",
-      "Suresh Tukaram Kore, Malshiras",
+      words.seller,
     ].filter(Boolean).join("\n");
   };
 
   const shareInvoiceBill = async (button) => {
-    const text = invoiceSummary();
+    const text = invoiceSummary(window.STKI18n.getLang());
     if (!window.STKShare) {
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank", "noopener");
       return;
@@ -412,7 +463,7 @@
     setView("preview");
     document.title = state.invoiceNumber ? `Invoice-${state.invoiceNumber}` : "STK-Invoice";
     button.setAttribute("aria-busy", "true");
-    showToast("Preparing invoice to share");
+    showToast(t("inv.toast.preparing"));
     // Let the preview finish laying out, otherwise the snapshot measures zero.
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     try {
@@ -423,25 +474,26 @@
         text,
         onFallbackPrint: () => setTimeout(() => window.print(), 500),
       });
-      if (result === "shared-file") showToast("Shared - pick WhatsApp in the share sheet");
-      else if (result === "shared-text") showToast("Invoice details shared as text");
-      else if (result === "whatsapp-link") showToast("WhatsApp opened, PDF dialog follows");
+      if (result === "shared-file") showToast(t("common.toast.sharedFile"));
+      else if (result === "shared-text") showToast(t("inv.toast.sharedText"));
+      else if (result === "whatsapp-link") showToast(t("common.toast.whatsapp"));
     } catch {
-      showToast("Share unavailable - use Create PDF");
+      showToast(t("common.toast.shareFailed"));
     } finally {
       button.removeAttribute("aria-busy");
     }
   };
 
   const resetInvoice = () => {
-    if (!window.confirm("Clear current invoice and start new?")) return;
+    if (!window.confirm(t("inv.confirm.new"))) return;
+    window.STKI18n.reset();
     state = blankState();
     try { localStorage.removeItem(STORAGE_KEY); } catch { /* Ignore blocked device storage. */ }
     createItemEditors();
     applyStateToForm();
     render();
     setView("editor");
-    showToast("New blank invoice ready");
+    showToast(t("inv.toast.newReady"));
   };
 
   // Voice data is untrusted model output: whitelist keys, coerce types, only fill what was spoken.
@@ -455,10 +507,14 @@
     return key.endsWith("Date") ? formatDate(raw) : raw;
   };
 
+  // Returns the field ids it wrote, so only those follow the page language afterwards.
   const applyVoiceData = (data) => {
+    const written = new Set();
     Object.keys(blankState()).forEach((key) => {
       const value = key === "items" ? "" : voiceValue(key, data[key]);
-      if (value) state[key] = value;
+      if (!value) return;
+      state[key] = value;
+      written.add(key);
     });
     // Spoken items go into the first empty rows; rows the user already filled stay untouched.
     let slot = 0;
@@ -468,19 +524,38 @@
       if (!itemFields.some((field) => item[field])) return;
       while (slot < ITEM_COUNT && itemFields.some((field) => String(state.items[slot][field] || "").trim())) slot += 1;
       if (slot >= ITEM_COUNT) return;
-      const grain = GRAINS.find(([name]) => name === item.particulars);
-      if (grain && !item.hsn) item.hsn = grain[1];
+      const grain = findGrain(item.particulars);
+      if (grain && !item.hsn) item.hsn = grain[2];
       state.items[slot] = item;
+      itemFields.forEach((field) => written.add(`items.${slot}.${field}`));
     });
     applyStateToForm();
     render();
+    return written;
   };
 
+  // Typed text that follows the language switch (api/translate.js keeps the same list). Codes, numbers,
+  // dates and statuses never change. `only`: limit to these field ids (voice fill, retry).
+  const CONVERTIBLE = ["buyerDetails", "stateCode"];
+  const CONVERTIBLE_ITEM = ["particulars", "uom"];
+  const convertTypedText = async (only) => {
+    if (!(await window.STKI18n.convertDraft(() => state, CONVERTIBLE, CONVERTIBLE_ITEM, showToast, only))) return;
+    applyStateToForm();
+    render();
+  };
+  // Details left unconverted (offline, failed, or the page closed meanwhile) catch up; nothing else is touched.
+  const retryMissed = () => {
+    const missed = window.STKI18n.missedIds();
+    if (missed.size) convertTypedText(missed);
+  };
+
+  window.STKI18n.init("invoice", "en");
   createItemEditors();
   createPreviewRows();
   applyStateToForm();
   render();
   fitPreview();
+  retryMissed();
 
   const syncDateFromPicker = (native) => {
     const field = native.closest(".date-input-wrap")?.querySelector("[data-date-field]");
@@ -505,17 +580,18 @@
       state.items[index][key] = field.value;
       if (field.dataset.grainPicker === "select") {
         const custom = field.parentElement.querySelector('[data-grain-picker="custom"]');
-        const grain = GRAINS.find(([name]) => name === field.value);
+        const grain = GRAINS.find(([english]) => english === field.value);
         if (field.value === OTHER_GRAIN) {
           custom.hidden = false;
           state.items[index].particulars = custom.value;
           custom.focus();
         } else {
           custom.hidden = true;
+          state.items[index].particulars = grain ? grainName(grain) : "";
           if (grain) {
-            state.items[index].hsn = grain[1];
+            state.items[index].hsn = grain[2];
             const hsnInput = document.querySelector(`[data-item-index="${index}"][data-item-field="hsn"]`);
-            if (hsnInput) hsnInput.value = grain[1];
+            if (hsnInput) hsnInput.value = grain[2];
           }
         }
       }
@@ -562,12 +638,21 @@
   window.STKVoice?.initVoiceButton(document.getElementById("voiceFillBtn"), {
     docType: "invoice",
     toast: showToast,
-    onResult: ({ transcript, data }) => {
-      applyVoiceData(data);
+    onResult: async ({ transcript, data }) => {
+      const written = applyVoiceData(data);
       setView("preview");
-      showToast(`Filled from voice: "${transcript.length > 70 ? `${transcript.slice(0, 70)}...` : transcript}"`);
+      // Spoken names arrive in the script they were said in; bring just those into the page language.
+      await convertTypedText(written);
+      showToast(t("common.toast.voiceFilled", { text: transcript.length > 70 ? `${transcript.slice(0, 70)}...` : transcript }));
     },
   });
+  document.getElementById("langSwitch").addEventListener("click", () => {
+    window.STKI18n.toggle();
+    render();
+    fitPreview();
+    convertTypedText();
+  });
+  window.addEventListener("online", retryMissed);
   window.addEventListener("resize", fitPreview, { passive: true });
   window.visualViewport?.addEventListener("resize", fitPreview, { passive: true });
 

@@ -29,6 +29,22 @@ test("invoice PDF renders all fields, seller header, logo and signature", { skip
   }
   assert.ok(shown.logoSvg, "corn logo SVG");
   assert.ok(shown.signatureLoaded, "signature.png");
+  assert.ok(shown.sellerText.includes("TAX INVOICE"), "bot invoices stay English by default");
+  assert.equal(shown.overflows, false, "nothing clipped off the A4 sheet");
+  assertSinglePageA4(pdf);
+});
+
+test("Marathi invoice PDF keeps totals, legal markers and one A4 page", { skip, timeout: 60000 }, async () => {
+  const state = invoices[0];
+  const { pdf, shown } = await renderPdf("INVOICE", state, "mr");
+  const totals = calculateInvoice(state);
+  assert.equal(shown.grandTotal, formatMoney(totals.grandTotal));
+  assert.equal(shown.igst, formatMoney(totals.igst));
+  assert.match(shown.amountWords, /रुपये .*फक्त$/);
+  for (const text of ["सुरेश तुकाराम कोरे", "कर बीजक", "TAX INVOICE", "ORIGINAL FOR RECIPIENT", "7057100034", "ACOPK3657P", state.invoiceNumber, "MH45 AB 1234"]) {
+    assert.ok(shown.sellerText.includes(text), `missing ${text}`);
+  }
+  assert.equal(shown.overflows, false, "nothing clipped off the A4 sheet");
   assertSinglePageA4(pdf);
 });
 
@@ -43,5 +59,20 @@ test("memo PDF renders Marathi fields, totals and signature", { skip, timeout: 6
     assert.ok(shown.sellerText.includes(text), `missing ${text}`);
   }
   assert.ok(shown.signatureLoaded, "signature.png");
+  assert.ok(shown.sellerText.includes("बाकी भाडे"), "bot memos stay Marathi by default");
+  assert.equal(shown.overflows, false, "nothing clipped off the A4 sheet");
+  assertSinglePageA4(pdf);
+});
+
+test("English memo PDF keeps totals and one A4 page with five items", { skip, timeout: 60000 }, async () => {
+  const state = memos[0];
+  const { pdf, shown } = await renderPdf("MEMO", state, "en");
+  const totals = calculateMemo(state);
+  assert.equal(shown.memoTotal, formatMoney(totals.total));
+  assert.equal(shown.memoBalance, formatMoney(totals.balance));
+  for (const text of ["Suresh Tukaram Kore", "Balance freight", "Vehicle No.", "MH45 AB 1234", "॥ श्री ॥"]) {
+    assert.ok(shown.sellerText.includes(text), `missing ${text}`);
+  }
+  assert.equal(shown.overflows, false, "nothing clipped off the A4 sheet");
   assertSinglePageA4(pdf);
 });

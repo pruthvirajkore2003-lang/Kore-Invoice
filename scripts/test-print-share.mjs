@@ -77,6 +77,8 @@ for (const app of apps) {
   assert.ok(html.includes('id="voiceFillBtn"'), `${app.html}: voice button missing`);
   assert.ok(html.indexOf("/voice.js") > 0 && html.indexOf("/voice.js") < html.indexOf(app.css.replace("public/", "/").replace(".css", ".js")), `${app.html}: voice.js must load before page script`);
   assert.ok(html.indexOf("/share.js") < html.indexOf(app.css.replace("public/", "/").replace(".css", ".js")), `${app.html}: share.js must load first`);
+  assert.ok(html.includes('id="langSwitch"'), `${app.html}: language switch missing`);
+  assert.ok(html.indexOf("/i18n.js") > 0 && html.indexOf("/i18n.js") < html.indexOf("/voice.js"), `${app.html}: i18n.js must load before voice.js and the page script`);
 }
 
 // Offline bundles must be genuinely standalone: everything inlined, no runtime
@@ -86,6 +88,7 @@ for (const app of apps) {
   assert.ok(bundle.includes("window.STKShare"), `${app.bundle}: share pipeline not inlined`);
   assert.ok(bundle.includes("shareBill"), `${app.bundle}: shareBill missing`);
   assert.ok(bundle.includes("window.STKVoice"), `${app.bundle}: voice pipeline not inlined`);
+  assert.ok(bundle.includes("window.STKI18n"), `${app.bundle}: language switch not inlined`);
   assert.ok(!/<script[^>]+src=/.test(bundle), `${app.bundle}: external script tag`);
   assert.ok(!/<link[^>]+stylesheet/.test(bundle), `${app.bundle}: external stylesheet link`);
   assert.ok(!bundle.includes("--print-zoom"), `${app.bundle}: stale --print-zoom`);
@@ -95,7 +98,9 @@ for (const app of apps) {
     .filter((url) => !url.startsWith("http://www.w3.org/"))
     .filter((url) => !url.startsWith("https://api.whatsapp.com/"))
     // User-initiated voice fill; the button toasts a manual-entry fallback when offline.
-    .filter((url) => url !== "https://www.korewebs.site/api/parse-voice");
+    .filter((url) => url !== "https://www.korewebs.site/api/parse-voice")
+    // Language switch converting typed names; offline it keeps the typed text and says so.
+    .filter((url) => url !== "https://www.korewebs.site/api/translate");
   assert.deepEqual(remoteUrls, [], `${app.bundle}: unexpected remote URLs`);
 }
 

@@ -5,59 +5,62 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
   <meta name="theme-color" content="#174f40" />
-  <title>STK Invoice Maker</title>
+  <title data-i18n="inv.title">STK Invoice Maker</title>
   <link rel="stylesheet" href="/invoice.css" />
 </head>
 
 <body class="view-editor">
   <header class="topbar">
-    <div class="brand-mini" aria-label="STK Invoice Maker">
+    <div class="brand-mini" aria-label="STK Invoice Maker" data-i18n-aria-label="inv.title">
       <span class="brand-dot">STK</span>
-      <span><strong>Invoice Maker</strong><small>Suresh Tukaram Kore</small></span>
+      <span><strong data-i18n="inv.brand">Invoice Maker</strong><small data-i18n="common.seller">Suresh Tukaram Kore</small></span>
     </div>
     <div class="top-actions">
-      <a class="button doc-switch" href="/memo.html">माल पावती</a>
-      <button class="button voice-btn" id="voiceFillBtn" type="button" title="Speak to fill form">🎤 <span class="voice-btn-label">Voice fill</span></button>
-      <button class="button ghost" id="newInvoice" type="button">New invoice</button>
+      <button class="button lang-switch" id="langSwitch" type="button" lang="mr" title="Switch language / भाषा बदला" data-i18n="common.switchTo">मराठी</button>
+      <a class="button doc-switch" href="/memo.html" data-i18n="inv.memoLink">Freight memo</a>
+      <button class="button voice-btn" id="voiceFillBtn" type="button" title="Speak to fill form" data-i18n-title="voice.title">🎤 <span class="voice-btn-label">Voice fill</span></button>
+      <button class="button ghost" id="newInvoice" type="button" data-i18n="inv.new">New invoice</button>
     </div>
   </header>
 
-  <nav class="mobile-switch" aria-label="Invoice view">
-    <button class="switch-button active" data-view="editor" type="button">Fill details</button>
-    <button class="switch-button" data-view="preview" type="button">Preview</button>
+  <nav class="mobile-switch" aria-label="Invoice view" data-i18n-aria-label="inv.viewNav">
+    <button class="switch-button active" data-view="editor" type="button" data-i18n="common.fillDetails">Fill details</button>
+    <button class="switch-button" data-view="preview" type="button" data-i18n="inv.tab.preview">Preview</button>
   </nav>
 
   <main class="app-shell">
     <section class="editor-panel" aria-labelledby="editor-title">
       <div class="editor-intro">
-        <p class="eyebrow">New tax invoice</p>
-        <h1 id="editor-title">Enter invoice details</h1>
-        <p>Draft saves automatically on this phone. Rate entered in rupees, for example 63.75.</p>
+        <p class="eyebrow" data-i18n="inv.intro.eyebrow">New tax invoice</p>
+        <h1 id="editor-title" data-i18n="inv.intro.title">Enter invoice details</h1>
+        <p data-i18n="inv.intro.text">Draft saves automatically on this phone. Rate entered in rupees, for example 63.75.</p>
       </div>
 
       <form id="invoiceForm" autocomplete="off">
         <fieldset class="form-card">
-          <legend>Invoice</legend>
+          <legend data-i18n="inv.form.invoice">Invoice</legend>
           <div class="form-grid three">
-            <label>Invoice date<span class="date-input-wrap">
+            <label data-i18n="inv.form.invoiceDate">Invoice date<span class="date-input-wrap">
                 <input type="text" name="invoiceDate" placeholder="DD/MM/YYYY" inputmode="numeric" maxlength="10"
                   autocomplete="off" data-field data-date-field />
-                <button class="date-picker-trigger" type="button" title="Pick date" aria-label="Pick invoice date"><svg
+                <button class="date-picker-trigger" type="button" title="Pick date" aria-label="Pick invoice date"
+                  data-i18n-title="common.pickDate" data-i18n-aria-label="inv.form.pickInvoiceDate"><svg
                     viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                     <rect x="3" y="5" width="18" height="16" rx="3" />
                     <path d="M8 3v4M16 3v4M3 10h18" />
                   </svg></button>
                 <input class="date-picker-native" type="date" tabindex="-1" aria-hidden="true" />
               </span></label>
-            <label>Invoice number<input type="text" name="invoiceNumber" inputmode="numeric" data-field /></label>
-            <label>PIN code<input type="text" name="pinCode" inputmode="numeric" maxlength="6" data-field /></label>
+            <label data-i18n="inv.form.invoiceNumber">Invoice number<input type="text" name="invoiceNumber" inputmode="numeric" data-field /></label>
+            <label data-i18n="inv.form.pinCode">PIN code<input type="text" name="pinCode" inputmode="numeric" maxlength="6" data-field /></label>
           </div>
           <div class="form-grid two">
-            <label>PO number<input type="text" name="poNumber" data-field /></label>
-            <label>PO date<span class="date-input-wrap">
+            <label data-i18n="inv.form.poNumber">PO number<input type="text" name="poNumber" data-field /></label>
+            <label data-i18n="inv.form.poDate">PO date<span class="date-input-wrap">
                 <input type="text" name="poDate" placeholder="DD/MM/YYYY" inputmode="numeric" maxlength="10"
                   autocomplete="off" data-field data-date-field />
-                <button class="date-picker-trigger" type="button" title="Pick date" aria-label="Pick PO date"><svg
+                <button class="date-picker-trigger" type="button" title="Pick date" aria-label="Pick PO date"
+                  data-i18n-title="common.pickDate" data-i18n-aria-label="inv.form.pickPoDate"><svg
                     viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                     <rect x="3" y="5" width="18" height="16" rx="3" />
                     <path d="M8 3v4M16 3v4M3 10h18" />
@@ -68,23 +71,23 @@
         </fieldset>
 
         <fieldset class="form-card">
-          <legend>Bill to party</legend>
-          <label>Buyer name and address<textarea name="buyerDetails" rows="3" data-field></textarea></label>
+          <legend data-i18n="inv.form.billTo">Bill to party</legend>
+          <label data-i18n="inv.form.buyerDetails">Buyer name and address<textarea name="buyerDetails" rows="3" data-field></textarea></label>
           <div class="form-grid two">
-            <label>State / code<input type="text" name="stateCode" data-field /></label>
-            <label>Truck number<input type="text" name="truckNumber" data-field /></label>
+            <label data-i18n="inv.form.stateCode">State / code<input type="text" name="stateCode" data-field /></label>
+            <label data-i18n="inv.form.truckNumber">Truck number<input type="text" name="truckNumber" data-field /></label>
             <label>PAN<input type="text" name="buyerPan" data-field /></label>
             <label>GSTIN<input type="text" name="buyerGstin" data-field /></label>
           </div>
         </fieldset>
 
         <fieldset class="form-card">
-          <legend>Item details</legend>
+          <legend data-i18n="inv.form.items">Item details</legend>
           <div id="itemEditors" class="item-editors"></div>
         </fieldset>
 
         <fieldset class="form-card">
-          <legend>Tax and payment</legend>
+          <legend data-i18n="inv.form.taxPayment">Tax and payment</legend>
           <div class="form-grid two">
             <label>IGST %<input type="number" min="0" max="100" step="0.01" name="igstRate" inputmode="decimal"
                 data-field /></label>
@@ -92,13 +95,13 @@
                 data-field /></label>
             <label>CGST %<input type="number" min="0" max="100" step="0.01" name="cgstRate" inputmode="decimal"
                 data-field /></label>
-            <label>Freight (INR)<input type="number" min="0" step="0.01" name="freight" inputmode="decimal"
+            <label data-i18n="inv.form.freight">Freight (INR)<input type="number" min="0" step="0.01" name="freight" inputmode="decimal"
                 data-field /></label>
-            <label>Payment status
+            <label data-i18n="inv.form.paymentStatus">Payment status
               <select name="paymentStatus" data-field>
-                <option value="PENDING">Pending</option>
-                <option value="PAID">Paid</option>
-                <option value="PARTIALLY PAID">Partially paid</option>
+                <option value="PENDING" data-i18n="inv.pay.pending">Pending</option>
+                <option value="PAID" data-i18n="inv.pay.paid">Paid</option>
+                <option value="PARTIALLY PAID" data-i18n="inv.pay.partial">Partially paid</option>
               </select>
             </label>
           </div>
@@ -106,7 +109,7 @@
       </form>
 
       <div class="mobile-create">
-        <button class="button primary wide" id="mobilePreview" type="button">Preview invoice</button>
+        <button class="button primary wide" id="mobilePreview" type="button" data-i18n="inv.mobilePreview">Preview invoice</button>
         <button class="button share wide" id="mobileShare" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"
             focusable="false">
             <circle cx="18" cy="5" r="2.6" />
@@ -117,18 +120,18 @@
       </div>
     </section>
 
-    <section class="invoice-stage" aria-label="Printable invoice preview">
+    <section class="invoice-stage" aria-label="Printable invoice preview" data-i18n-aria-label="inv.stage">
       <div class="preview-toolbar">
-        <span><i></i> Live preview</span>
+        <span data-i18n="inv.livePreview"><i></i> Live preview</span>
         <div class="toolbar-actions">
-          <button class="button share" id="shareInvoice" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"
+          <button class="button share" id="shareInvoice" type="button" data-i18n="common.share"><svg viewBox="0 0 24 24" aria-hidden="true"
               focusable="false">
               <circle cx="18" cy="5" r="2.6" />
               <circle cx="6" cy="12" r="2.6" />
               <circle cx="18" cy="19" r="2.6" />
               <path d="M8.3 10.8 15.7 6.4M8.3 13.2l7.4 4.4" />
             </svg>Share to WhatsApp</button>
-          <button class="button primary" id="previewPrint" type="button">Create PDF</button>
+          <button class="button primary" id="previewPrint" type="button" data-i18n="common.createPdf">Create PDF</button>
         </div>
       </div>
 
@@ -155,39 +158,40 @@
             </svg>
           </div>
           <div class="seller-heading">
-            <h2>SURESH TUKARAM KORE</h2>
-            <p>Mhaswad Road Malshiras, Dist. Solapur, Malshiras</p>
-            <p>Maharashtra - 413107</p>
-            <strong>Mobile: 7057100034&nbsp; | &nbsp;PAN: ACOPK3657P</strong>
+            <h2 data-i18n="inv.doc.seller">SURESH TUKARAM KORE</h2>
+            <p data-i18n="inv.doc.address">Mhaswad Road Malshiras, Dist. Solapur, Malshiras</p>
+            <p data-i18n="inv.doc.state">Maharashtra - 413107</p>
+            <strong data-i18n="inv.doc.contact">Mobile: 7057100034&nbsp; | &nbsp;PAN: ACOPK3657P</strong>
           </div>
           <div class="invoice-title">
-            <strong>TAX INVOICE</strong>
-            <small>ORIGINAL FOR RECIPIENT</small>
+            <!-- GST Rules 46/48 markers: Marathi mode keeps the English words under the Marathi ones. -->
+            <strong><span data-i18n="inv.doc.taxInvoice">TAX INVOICE</span><span class="legal-en" lang="en">TAX INVOICE</span></strong>
+            <small><span data-i18n="inv.doc.original">ORIGINAL FOR RECIPIENT</span><span class="legal-en" lang="en">ORIGINAL FOR RECIPIENT</span></small>
           </div>
         </div>
 
         <div class="invoice-meta grid-three">
-          <div><label>INVOICE DATE</label><span data-out="invoiceDate"></span></div>
-          <div><label>INVOICE NO.</label><span data-out="invoiceNumber"></span></div>
-          <div><label>PIN CODE</label><span data-out="pinCode"></span></div>
+          <div><label data-i18n="inv.doc.invoiceDate">INVOICE DATE</label><span data-out="invoiceDate"></span></div>
+          <div><label data-i18n="inv.doc.invoiceNo">INVOICE NO.</label><span data-out="invoiceNumber"></span></div>
+          <div><label data-i18n="inv.doc.pinCode">PIN CODE</label><span data-out="pinCode"></span></div>
         </div>
 
         <div class="invoice-meta grid-two">
-          <div><label>PO NO.</label><span data-out="poNumber"></span></div>
-          <div><label>PO DATE</label><span data-out="poDate"></span></div>
+          <div><label data-i18n="inv.doc.poNo">PO NO.</label><span data-out="poNumber"></span></div>
+          <div><label data-i18n="inv.doc.poDate">PO DATE</label><span data-out="poDate"></span></div>
         </div>
 
         <div class="buyer-block">
-          <div class="buyer-main"><label>BILL TO PARTY</label><span data-out="buyerDetails"></span></div>
+          <div class="buyer-main"><label data-i18n="inv.doc.billTo">BILL TO PARTY</label><span data-out="buyerDetails"></span></div>
           <div class="buyer-side">
-            <div><label>STATE / CODE</label><span data-out="stateCode"></span></div>
+            <div><label data-i18n="inv.doc.stateCode">STATE / CODE</label><span data-out="stateCode"></span></div>
             <div><label>PAN</label><span data-out="buyerPan"></span></div>
             <div><label>GSTIN</label><span data-out="buyerGstin"></span></div>
-            <div><label>TRUCK NO.</label><span data-out="truckNumber"></span></div>
+            <div><label data-i18n="inv.doc.truckNo">TRUCK NO.</label><span data-out="truckNumber"></span></div>
           </div>
         </div>
 
-        <h3 class="section-label">ITEM DETAILS</h3>
+        <h3 class="section-label" data-i18n="inv.doc.items">ITEM DETAILS</h3>
         <table class="items-table">
           <colgroup>
             <col class="col-serial" />
@@ -201,14 +205,14 @@
           </colgroup>
           <thead>
             <tr>
-              <th>S. No.</th>
-              <th>PARTICULARS</th>
-              <th>HSN Code</th>
-              <th>Bags</th>
-              <th>UOM</th>
-              <th>Quantity</th>
-              <th>Rate</th>
-              <th>Value of<br />Supply</th>
+              <th data-i18n="inv.doc.serial">S. No.</th>
+              <th data-i18n="inv.doc.particulars">PARTICULARS</th>
+              <th data-i18n="inv.doc.hsn">HSN Code</th>
+              <th data-i18n="inv.doc.bags">Bags</th>
+              <th data-i18n="inv.doc.uom">UOM</th>
+              <th data-i18n="inv.doc.quantity">Quantity</th>
+              <th data-i18n="inv.doc.rate">Rate</th>
+              <th><span data-i18n="inv.doc.valueOf">Value of</span><br /><span data-i18n="inv.doc.supply">Supply</span></th>
             </tr>
           </thead>
           <tbody id="previewItems"></tbody>
@@ -216,8 +220,8 @@
 
         <div class="totals-area">
           <div class="amount-panel">
-            <div class="payment-row"><label>PAYMENT STATUS</label><span data-out="paymentStatus"></span></div>
-            <div class="words-row"><label>AMOUNT IN WORDS</label><strong id="amountWords"></strong></div>
+            <div class="payment-row"><label data-i18n="inv.doc.paymentStatus">PAYMENT STATUS</label><span data-out="paymentStatus"></span></div>
+            <div class="words-row"><label data-i18n="inv.doc.amountWords">AMOUNT IN WORDS</label><strong id="amountWords"></strong></div>
           </div>
           <div class="tax-panel">
             <div><label>IGST</label><span id="igstRateOut" class="tax-rate"></span><b>%</b><strong
@@ -226,39 +230,41 @@
                 id="sgstAmount"></strong></div>
             <div><label>CGST</label><span id="cgstRateOut" class="tax-rate"></span><b>%</b><strong
                 id="cgstAmount"></strong></div>
-            <div><label>FREIGHT</label><span></span><b></b><strong id="freightAmount"></strong></div>
-            <div class="grand-total"><label>GRAND TOTAL</label><span></span><b></b><strong id="grandTotal"></strong>
+            <div><label data-i18n="inv.doc.freight">FREIGHT</label><span></span><b></b><strong id="freightAmount"></strong></div>
+            <div class="grand-total"><label data-i18n="inv.doc.grandTotal">GRAND TOTAL</label><span></span><b></b><strong id="grandTotal"></strong>
             </div>
           </div>
         </div>
 
         <div class="footer-area">
           <div class="bank-panel">
-            <h3>BANK DETAILS</h3>
+            <h3 data-i18n="inv.doc.bank">BANK DETAILS</h3>
             <dl>
-              <dt>Bank Name</dt>
-              <dd>ICICI BANK</dd>
-              <dt>Branch Name</dt>
-              <dd>Akluj</dd>
-              <dt>Bank A/c</dt>
+              <dt data-i18n="inv.doc.bankName">Bank Name</dt>
+              <dd data-i18n="inv.doc.bankNameValue">ICICI BANK</dd>
+              <dt data-i18n="inv.doc.branch">Branch Name</dt>
+              <dd data-i18n="inv.doc.branchValue">Akluj</dd>
+              <dt data-i18n="inv.doc.account">Bank A/c</dt>
               <dd>649605075003</dd>
-              <dt>IFSC Code</dt>
+              <dt data-i18n="inv.doc.ifsc">IFSC Code</dt>
               <dd>ICIC0006496</dd>
             </dl>
           </div>
           <div class="sign-panel">
-            <h3>FOR SURESH TUKARAM KORE</h3>
-            <img src="/signature.png" alt="Authorised signature" />
-            <p>Authorised Signatory</p>
+            <h3 data-i18n="inv.doc.forSeller">FOR SURESH TUKARAM KORE</h3>
+            <img src="/signature.png" alt="Authorised signature" data-i18n-alt="inv.doc.signatureAlt" />
+            <p data-i18n="inv.doc.signatory">Authorised Signatory</p>
           </div>
         </div>
 
-        <div class="invoice-footnote"><span>Computer generated invoice</span><span>Page 1 of 1</span></div>
+        <div class="invoice-footnote"><span data-i18n="inv.doc.computer">Computer generated invoice</span><span
+            data-i18n="inv.doc.page">Page 1 of 1</span></div>
       </article>
     </section>
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/i18n.js"></script>
   <script src="/share.js"></script>
   <script src="/voice.js"></script>
   <script src="/invoice.js"></script>

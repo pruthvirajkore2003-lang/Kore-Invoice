@@ -2,9 +2,10 @@
   "use strict";
 
   // Groq key lives only in the Vercel Function (api/parse-voice.js). Offline file:// bundles call the deployed site.
-  const ENDPOINT = location.protocol === "file:" ? "https://www.korewebs.site/api/parse-voice" : "/api/parse-voice";
+  const ENDPOINT = /^https?:$/.test(location.protocol) ? "/api/parse-voice" : "https://www.korewebs.site/api/parse-voice";
   const MAX_RECORDING_MS = 60000;
-  const OFFLINE_MESSAGE = "Voice fill requires internet. You can still fill the form manually.";
+  // Looked up when shown, so messages follow a language switch made after this script loaded.
+  const t = (key) => window.STKI18n.t(key);
 
   const pickMimeType = () => {
     if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") return "";
@@ -18,7 +19,7 @@
 
   // Sends a recorded clip to the Edge Function; resolves { transcript, data } or throws with a user-facing message.
   const recordAndParse = async (blob, docType) => {
-    if (navigator.onLine === false) throw new Error(OFFLINE_MESSAGE);
+    if (navigator.onLine === false) throw new Error(t("voice.offline"));
     const form = new FormData();
     form.append("audio", blob, `voice.${/mp4|m4a|aac/.test(blob.type) ? "mp4" : "webm"}`);
     form.append("docType", docType);
@@ -27,10 +28,10 @@
     try {
       response = await fetch(ENDPOINT, { method: "POST", body: form, signal: AbortSignal.timeout?.(45000) });
     } catch {
-      throw new Error(OFFLINE_MESSAGE);
+      throw new Error(t("voice.offline"));
     }
     const body = await response.json().catch(() => null);
-    if (!response.ok || !body?.success) throw new Error("Voice fill failed. Please try again or fill manually.");
+    if (!response.ok || !body?.success) throw new Error(t("voice.failed"));
     return { transcript: String(body.transcript || ""), data: body.data && typeof body.data === "object" ? body.data : {} };
   };
 
@@ -38,7 +39,6 @@
   const initVoiceButton = (button, { docType, toast, onResult }) => {
     if (!button) return;
     const label = button.querySelector(".voice-btn-label");
-    const idleLabel = label?.textContent || "";
     let recorder = null;
     let stopTimer;
 
@@ -46,20 +46,21 @@
       button.dataset.voiceState = state;
       button.setAttribute("aria-pressed", String(state === "recording"));
       button.setAttribute("aria-busy", String(state === "processing"));
-      if (label) label.textContent = state === "recording" ? "Stop" : state === "processing" ? "Reading..." : idleLabel;
+      if (label) label.textContent = t(state === "recording" ? "voice.stop" : state === "processing" ? "voice.reading" : "voice.idle");
     };
     setState("inactive");
+    document.addEventListener("stk:langchange", () => setState(button.dataset.voiceState));
 
     const start = async () => {
-      if (navigator.onLine === false) return toast(OFFLINE_MESSAGE);
+      if (navigator.onLine === false) return toast(t("voice.offline"));
       if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-        return toast("Voice recording is not supported in this browser. Please fill manually.");
+        return toast(t("voice.unsupported"));
       }
       let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       } catch {
-        return toast("Microphone permission denied. Please allow mic access or fill manually.");
+        return toast(t("voice.denied"));
       }
       const mimeType = pickMimeType();
       const chunks = [];
@@ -67,7 +68,7 @@
         recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       } catch {
         stream.getTracks().forEach((track) => track.stop());
-        return toast("Voice recording is not supported in this browser. Please fill manually.");
+        return toast(t("voice.unsupported"));
       }
       recorder.addEventListener("dataavailable", (event) => event.data.size && chunks.push(event.data));
       recorder.addEventListener("stop", async () => {
@@ -77,13 +78,13 @@
         recorder = null;
         if (!blob.size) {
           setState("inactive");
-          return toast("No audio captured. Please try again.");
+          return toast(t("voice.noAudio"));
         }
         setState("processing");
-        toast("Reading your voice note...");
+        toast(t("voice.processing"));
         try {
           const result = await recordAndParse(blob, docType);
-          if (!result.transcript) toast("Could not hear anything. Please try again.");
+          if (!result.transcript) toast(t("voice.empty"));
           else onResult(result);
         } catch (error) {
           toast(error.message);
@@ -93,7 +94,7 @@
       });
       recorder.start();
       setState("recording");
-      toast("Listening... tap 🎤 again to stop");
+      toast(t("voice.listening"));
       stopTimer = setTimeout(() => recorder?.state === "recording" && recorder.stop(), MAX_RECORDING_MS);
     };
 
@@ -101,7 +102,7 @@
       const state = button.dataset.voiceState;
       if (state === "processing") return;
       if (state === "recording") recorder?.stop();
-      else start().catch(() => { setState("inactive"); toast("Voice fill failed. Please fill manually."); });
+      else start().catch(() => { setState("inactive"); toast(t("voice.error")); });
     });
   };
 
